@@ -1,0 +1,461 @@
+{
+  "info": {
+    "name": "Hotel Surveillance API",
+    "description": "Set collection variables: baseUrl (http://localhost:5001/api), accessToken (paste token from Login). Replace hotelId, guestId, stayId, alertId, blacklistEntryId with real UUIDs from your DB.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001/api"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "hotelId",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "guestId",
+      "value": "00000000-0000-0000-0000-000000000002"
+    },
+    {
+      "key": "stayId",
+      "value": "00000000-0000-0000-0000-000000000003"
+    },
+    {
+      "key": "alertId",
+      "value": "00000000-0000-0000-0000-000000000004"
+    },
+    {
+      "key": "blacklistEntryId",
+      "value": "00000000-0000-0000-0000-000000000005"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@hotel.com\",\n  \"password\": \"securepass12\",\n  \"fullName\": \"Test User\",\n  \"role\": \"hotel\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@hotel.com\",\n  \"password\": \"securepass12\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Guests",
+      "item": [
+        {
+          "name": "Create guest + stay",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Doe\",\n  \"idNumber\": \"PASS-001\",\n  \"hotelId\": \"{{hotelId}}\",\n  \"checkIn\": \"2026-04-01T14:00:00.000Z\",\n  \"roomNumber\": \"101\",\n  \"dateOfBirth\": \"1990-05-15\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List guests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guests"
+          }
+        },
+        {
+          "name": "List guests (hotelId query)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guests?hotelId={{hotelId}}"
+          }
+        },
+        {
+          "name": "Get guest by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guests/{{guestId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stays",
+      "item": [
+        {
+          "name": "Create stay",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/stays",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guestId\": \"{{guestId}}\",\n  \"hotelId\": \"{{hotelId}}\",\n  \"checkIn\": \"2026-04-02T12:00:00.000Z\",\n  \"roomNumber\": \"205\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "List alerts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/alerts"
+          }
+        },
+        {
+          "name": "Mark alert reviewed (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/alerts/{{alertId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blacklist top-level",
+      "item": [
+        {
+          "name": "List blacklist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/blacklist"
+          }
+        },
+        {
+          "name": "List blacklist (hotelId)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/blacklist?hotelId={{hotelId}}"
+          }
+        },
+        {
+          "name": "Create blacklist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/blacklist",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hotelId\": \"{{hotelId}}\",\n  \"name\": \"Blocked Person\",\n  \"idNumber\": \"BLK-001\",\n  \"dateOfBirth\": \"1985-03-20\",\n  \"reason\": \"Test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hotels nested",
+      "item": [
+        {
+          "name": "Alerts for hotel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/hotels/{{hotelId}}/alerts"
+          }
+        },
+        {
+          "name": "Blacklist for hotel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/hotels/{{hotelId}}/blacklist"
+          }
+        },
+        {
+          "name": "Create blacklist (nested)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/hotels/{{hotelId}}/blacklist",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Blocked Person\",\n  \"idNumber\": \"BLK-002\",\n  \"dateOfBirth\": \"1985-03-20\",\n  \"reason\": \"Nested\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete blacklist entry",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/hotels/{{hotelId}}/blacklist/{{blacklistEntryId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Upload ID document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "stayId",
+                  "value": "{{stayId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "ID document",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose JPEG, PNG, GIF, WebP, or PDF (max 5 MB)"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/documents",
+            "description": "Body: form-data. After import, pick a file for the \"file\" key."
+          }
+        }
+      ]
+    }
+  ]
+}
