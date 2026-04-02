@@ -1,0 +1,44 @@
+.page {
+  max-width: 960px;
+}
+
+.page__card {
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  padding: 1.2rem 1.25rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+.page__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.page__text {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  font-size: 0.9375rem;
+}
+
+.page__list {
+  margin: 1rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.page__code {
+  font-size: 0.85em;
+  padding: 0.08rem 0.3rem;
+  border-radius: 2px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: ui-monospace, Consolas, monospace;
+}

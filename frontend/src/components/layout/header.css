@@ -1,0 +1,97 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 100%;
+  padding: 0 clamp(1rem, 3vw, 1.5rem);
+}
+
+.app-header__titles {
+  min-width: 0;
+}
+
+.app-header__heading {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.app-header__meta {
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0.45rem 0.3rem 0.3rem;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+}
+
+.app-header__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 2px;
+  background: var(--bg-muted);
+  border: 1px solid var(--border-strong);
+}
+
+.app-header__user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.02rem;
+  padding-right: 0.25rem;
+  text-align: left;
+}
+
+.app-header__name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.app-header__role {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.app-header__logout {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.65rem;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.app-header__logout:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
