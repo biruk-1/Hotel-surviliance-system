@@ -1,23 +1,7 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const db = require('../../config/database');
-const config = require('../../config');
 const HttpError = require('../../utils/httpError');
 const { writeAuditLog, AUDIT_ACTIONS, ENTITY_TYPES } = require('../../utils/auditLog');
-
-const BCRYPT_ROUNDS = 12;
-
-function signToken(user) {
-  return jwt.sign(
-    {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    },
-    config.auth.jwtSecret,
-    { expiresIn: config.auth.jwtExpiresIn }
-  );
-}
+const { hashPassword, comparePassword, signToken } = require('./auth.service');
 
 function mapPublicUser(row) {
   return {
@@ -33,7 +17,7 @@ async function register(req, res, next) {
   try {
     const { email, password, fullName, role } = req.body;
 
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const passwordHash = await hashPassword(password);
 
     const insert = `
       INSERT INTO users (email, password_hash, full_name, role)
@@ -80,7 +64,7 @@ async function login(req, res, next) {
       return;
     }
 
-    const match = await bcrypt.compare(password, user.password_hash);
+    const match = await comparePassword(password, user.password_hash);
     if (!match) {
       next(new HttpError(401, 'Invalid email or password'));
       return;

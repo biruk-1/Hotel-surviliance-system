@@ -6,7 +6,7 @@ async function createStay(req, res, next) {
   try {
     const { guestId, hotelId, checkIn, checkOut, roomNumber, status } = req.body;
 
-    await assertHotelAccess(req, hotelId);
+    assertHotelAccess(req, hotelId);
 
     const guest = await db.query(`SELECT id FROM guests WHERE id = $1`, [guestId]);
     if (guest.rows.length === 0) {
@@ -24,15 +24,7 @@ async function createStay(req, res, next) {
        )
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, guest_id, hotel_id, created_by_user_id, check_in, check_out, room_number, status, created_at, updated_at`,
-      [
-        guestId,
-        hotelId,
-        req.user.id,
-        checkIn,
-        checkOut || null,
-        roomNumber || null,
-        status || 'active',
-      ]
+      [guestId, hotelId, req.user.id, checkIn, checkOut || null, roomNumber || null, status || 'active']
     );
 
     res.status(201).json({

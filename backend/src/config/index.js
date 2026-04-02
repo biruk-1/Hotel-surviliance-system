@@ -1,5 +1,10 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+
+const envFile =
+  process.env.NODE_ENV === 'test'
+    ? path.resolve(__dirname, '../../.env.test')
+    : path.resolve(__dirname, '../../.env');
+require('dotenv').config({ path: envFile });
 
 const REQUIRED_DB_VARS = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
 const REQUIRED_AUTH_VARS = ['JWT_SECRET'];
@@ -10,9 +15,11 @@ function validateEnv() {
     return v === undefined || v === '';
   });
   if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}. Copy .env.example to .env and set values.`
-    );
+    const hint =
+      process.env.NODE_ENV === 'test'
+        ? 'Copy .env.test.example to .env.test and set values (use a dedicated test database, not production).'
+        : 'Copy .env.example to .env and set values.';
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}. ${hint}`);
   }
 }
 

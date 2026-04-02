@@ -5,23 +5,25 @@ const app = require('./app');
 const config = require('./config');
 const { closePool } = require('./config/database');
 const logger = require('./utils/logger');
+const { initSocketServer, closeSocketServer } = require('./socket/socket.server');
 
 const server = http.createServer(app);
+initSocketServer(server);
 
 function gracefulShutdown(signal) {
   return () => {
-    logger.info(`Received ${signal}, closing server and database pool`);
-    server.close(async (closeErr) => {
-      if (closeErr) {
-        logger.error('Error closing HTTP server', closeErr);
-      }
-      try {
-        await closePool();
-      } catch (err) {
-        logger.error('Error closing database pool', err);
-      }
-      process.exit(closeErr ? 1 : 0);
-    });
+    logger.info(`Received ${signal}, closing Socket.io, HTTP server, and database pool`);
+    closeSocketServer()
+      .catch((err) => logger.error('Error closing Socket.io', err))
+      .then(() => closePool())
+      .then(() => {
+        logger.info('Shutdown complete');
+        process.exit(0);
+      })
+      .catch((err) => {
+        logger.error('Shutdown error', err);
+        process.exit(1);
+      });
   };
 }
 

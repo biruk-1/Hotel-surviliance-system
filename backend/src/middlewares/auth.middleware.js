@@ -1,5 +1,4 @@
-const jwt = require('jsonwebtoken');
-const config = require('../config');
+const { verifyToken } = require('../modules/auth/auth.service');
 
 function authenticate(req, res, next) {
   const header = req.headers.authorization;
@@ -19,7 +18,7 @@ function authenticate(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, config.auth.jwtSecret);
+    const payload = verifyToken(token);
     req.user = {
       id: payload.sub,
       email: payload.email,

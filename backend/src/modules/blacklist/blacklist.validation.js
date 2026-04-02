@@ -1,4 +1,5 @@
 const { body, query } = require('express-validator');
+const { paginationRules } = require('../guests/guests.validation');
 
 const createBlacklistBodyRules = (options = {}) => {
   const { requireHotelId = false } = options;
@@ -30,6 +31,7 @@ const createBlacklistBodyRules = (options = {}) => {
 
 const listBlacklistQueryRules = [
   query('hotelId').optional().isUUID().withMessage('hotelId must be a valid UUID'),
+  ...paginationRules,
 ];
 
 module.exports = {

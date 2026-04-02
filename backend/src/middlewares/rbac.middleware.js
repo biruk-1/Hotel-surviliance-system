@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const { isHotelInScope } = require('../utils/hotelAccess');
 
 /**
  * Requires a valid JWT (use after `authenticate`).
@@ -25,10 +25,10 @@ function authorizeRoles(...allowedRoles) {
 /**
  * Hotel-scoped routes: `/something/:hotelId/...`
  * - `police` and `admin` may access any `hotelId`.
- * - `hotel` may access only if a `hotel_users` row exists for this user and hotel.
+ * - `hotel` may access only if `hotelId` is in `req.accessibleHotelIds` (set by `attachHotelScope`).
  */
 function requireHotelAccess(hotelIdParam = 'hotelId') {
-  return async (req, res, next) => {
+  return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -52,22 +52,21 @@ function requireHotelAccess(hotelIdParam = 'hotelId') {
     }
 
     if (role === 'hotel') {
-      try {
-        const { rows } = await db.query(
-          `SELECT 1 FROM hotel_users WHERE user_id = $1 AND hotel_id = $2 LIMIT 1`,
-          [req.user.id, hotelId]
-        );
-        if (rows.length === 0) {
-          return res.status(403).json({
-            success: false,
-            error: { message: 'You can only access data for hotels you are assigned to' },
-          });
-        }
-        req.hotelId = hotelId;
-        return next();
-      } catch (err) {
-        return next(err);
+      const ids = req.accessibleHotelIds;
+      if (ids === undefined) {
+        return res.status(403).json({
+          success: false,
+          error: { message: 'Hotel scope not available for this request' },
+        });
       }
+      if (ids.length === 0 || !isHotelInScope(ids, hotelId)) {
+        return res.status(403).json({
+          success: false,
+          error: { message: 'You can only access data for hotels you are assigned to' },
+        });
+      }
+      req.hotelId = hotelId;
+      return next();
     }
 
     return res.status(403).json({

@@ -20,7 +20,22 @@ async function uploadDocument(req, res, next) {
     const stayId = req.body.stayId;
     const title = (req.body.title && String(req.body.title).trim()) || 'ID document';
 
-    const stayRes = await db.query(`SELECT id, hotel_id FROM stays WHERE id = $1`, [stayId]);
+    let stayRes;
+    if (req.user.role === 'hotel') {
+      const ids = req.accessibleHotelIds;
+      if (!ids || ids.length === 0) {
+        unlinkQuiet(req.file.path);
+        next(new HttpError(404, 'Stay not found'));
+        return;
+      }
+      stayRes = await db.query(
+        `SELECT id, hotel_id FROM stays WHERE id = $1 AND hotel_id = ANY($2::uuid[])`,
+        [stayId, ids]
+      );
+    } else {
+      stayRes = await db.query(`SELECT id, hotel_id FROM stays WHERE id = $1`, [stayId]);
+    }
+
     if (stayRes.rows.length === 0) {
       unlinkQuiet(req.file.path);
       next(new HttpError(404, 'Stay not found'));
@@ -28,7 +43,7 @@ async function uploadDocument(req, res, next) {
     }
 
     const { hotel_id: hotelId } = stayRes.rows[0];
-    await assertHotelAccess(req, hotelId);
+    assertHotelAccess(req, hotelId);
 
     const relativePath = path
       .join('uploads', 'documents', req.file.filename)
