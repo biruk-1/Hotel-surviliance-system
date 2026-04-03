@@ -5,17 +5,31 @@ const NAV = {
   hotel: {
     title: 'Hotel',
     badge: 'Staff',
-    items: [{ to: '/hotel/dashboard', label: 'Dashboard' }],
+    items: [
+      { to: '/hotel/dashboard', label: 'Dashboard', end: true },
+      { to: '/hotel/guests/register', label: 'Register guest', end: true },
+      { to: '/hotel/guests', label: 'Guests', end: true },
+      { to: '/hotel/alerts', label: 'Alerts', end: true },
+    ],
   },
   police: {
     title: 'Police',
     badge: 'Ops',
-    items: [{ to: '/police/dashboard', label: 'Dashboard' }],
+    items: [
+      { to: '/police/dashboard', label: 'Dashboard', end: true },
+      { to: '/police/guests', label: 'Search guests', end: true },
+      { to: '/police/alerts', label: 'Alerts', end: true },
+      { to: '/police/blacklist', label: 'Blacklist', end: true },
+    ],
   },
   admin: {
     title: 'Admin',
     badge: 'Sys',
-    items: [{ to: '/admin/dashboard', label: 'Dashboard' }],
+    items: [
+      { to: '/admin/dashboard', label: 'Dashboard', end: true },
+      { to: '/admin/hotels', label: 'Hotels', end: true },
+      { to: '/admin/users', label: 'Users', end: true },
+    ],
   },
 }
 
@@ -38,10 +52,10 @@ export default function Sidebar({ portal }) {
           <NavLink
             key={item.to}
             to={item.to}
+            end={item.end}
             className={({ isActive }) =>
               `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
             }
-            end
           >
             {item.label}
           </NavLink>

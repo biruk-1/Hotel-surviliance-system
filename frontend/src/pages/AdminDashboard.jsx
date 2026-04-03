@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { ROUTES } from '../utils/routes'
 import './page.css'
 
 export default function AdminDashboard() {
@@ -6,13 +8,22 @@ export default function AdminDashboard() {
       <div className="page__card">
         <h2 className="page__title">System administration</h2>
         <p className="page__text">
-          Placeholder for org-wide configuration, user lifecycle, and audit views. The API
-          uses JWT roles; <strong>admin</strong> can reach the same read surfaces as police
-          for alerts and blacklist with broader operational expectations.
+          Manage properties and operator accounts. Only users with the <strong>admin</strong> role
+          can access this portal.
         </p>
         <ul className="page__list">
-          <li>Role: <strong>admin</strong> — use for cross-cutting tools and governance.</li>
-          <li>Next: user admin screens, hotel registry, operational dashboards.</li>
+          <li>
+            <Link className="page__link" to={ROUTES.admin.hotels}>
+              Hotel management
+            </Link>{' '}
+            — register properties and assign hotel staff.
+          </li>
+          <li>
+            <Link className="page__link" to={ROUTES.admin.users}>
+              User management
+            </Link>{' '}
+            — create accounts for hotel, police, and admin roles.
+          </li>
         </ul>
       </div>
     </div>

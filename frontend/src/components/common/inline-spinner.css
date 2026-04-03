@@ -1,0 +1,32 @@
+.inline-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.inline-spinner__dot {
+  border: 2px solid var(--border-strong);
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: inline-spinner-rotate 0.7s linear infinite;
+}
+
+.inline-spinner--sm .inline-spinner__dot {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.inline-spinner--md .inline-spinner__dot {
+  width: 1rem;
+  height: 1rem;
+}
+
+@keyframes inline-spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

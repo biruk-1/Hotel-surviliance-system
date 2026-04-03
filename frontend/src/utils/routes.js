@@ -11,6 +11,8 @@ export const ROUTES = {
   admin: {
     root: '/admin',
     dashboard: '/admin/dashboard',
+    hotels: '/admin/hotels',
+    users: '/admin/users',
   },
 }
 
@@ -26,4 +28,22 @@ export function getDashboardPathForRole(role) {
     default:
       return ROUTES.login
   }
+}
+
+/**
+ * After login, return a prior protected URL only if it matches the user's portal.
+ * @param {'hotel' | 'police' | 'admin'} role
+ * @param {string | undefined} fromPathname
+ */
+export function getPostLoginPath(role, fromPathname) {
+  if (
+    typeof fromPathname === 'string' &&
+    fromPathname.startsWith('/') &&
+    !fromPathname.startsWith(ROUTES.login)
+  ) {
+    if (role === 'hotel' && fromPathname.startsWith(ROUTES.hotel.root)) return fromPathname
+    if (role === 'police' && fromPathname.startsWith(ROUTES.police.root)) return fromPathname
+    if (role === 'admin' && fromPathname.startsWith(ROUTES.admin.root)) return fromPathname
+  }
+  return getDashboardPathForRole(role)
 }

@@ -4,7 +4,13 @@ import { ROUTES } from '../../utils/routes'
 
 const TITLES = {
   '/hotel/dashboard': 'Hotel dashboard',
+  '/hotel/guests/register': 'Register guest',
+  '/hotel/guests': 'Guests',
+  '/hotel/alerts': 'Alerts',
   '/police/dashboard': 'Police dashboard',
+  '/police/guests': 'Search guests',
+  '/police/alerts': 'Alerts',
+  '/police/blacklist': 'Blacklist',
   '/admin/dashboard': 'Admin dashboard',
 }
 

@@ -1,0 +1,211 @@
+.admin-page {
+  max-width: 1100px;
+}
+
+.admin-page__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 900px) {
+  .admin-page__grid--split {
+    grid-template-columns: 1fr 380px;
+    align-items: start;
+  }
+}
+
+.admin-page__card {
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  padding: 1.1rem 1.2rem;
+}
+
+.admin-page__card--spaced {
+  margin-top: 1.25rem;
+}
+
+.admin-page__card h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.admin-page__lede {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.admin-form__field input,
+.admin-form__field select {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.9rem;
+  font-weight: 450;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg-base);
+  color: var(--text);
+}
+
+.admin-form__field input[aria-invalid='true'],
+.admin-form__field select[aria-invalid='true'] {
+  border-color: var(--danger-border);
+}
+
+.admin-form__field input:focus,
+.admin-form__field select:focus {
+  outline: none;
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--focus);
+}
+
+.admin-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .admin-form__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-form__submit {
+  margin-top: 0.25rem;
+  padding: 0.55rem 0.85rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 2px;
+  border: 1px solid var(--border-strong);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  cursor: pointer;
+}
+
+.admin-form__submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-form__submit-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-form__error {
+  margin: 0.1rem 0 0;
+  font-size: 0.76rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--danger-text);
+}
+
+.admin-form__helper {
+  margin: 0.1rem 0 0;
+  font-size: 0.76rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-dim);
+}
+
+.admin-password-rules {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.2rem;
+  color: var(--text-dim);
+  font-size: 0.76rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.admin-password-rules li[data-pass='true'] {
+  color: var(--text-secondary);
+}
+
+.admin-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.admin-hint--spaced {
+  margin-bottom: 0.8rem;
+}
+
+.admin-select-hotel {
+  margin-bottom: 1rem;
+}
+
+.admin-select-hotel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.admin-select-hotel select {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg-base);
+  color: var(--text);
+}
+
+.admin-table-meta {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.admin-retry-btn {
+  margin-left: 0.5rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg-base);
+  color: var(--text-secondary);
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+}
+
+.admin-retry-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}

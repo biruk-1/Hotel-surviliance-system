@@ -1,18 +1,17 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { getDashboardPathForRole } from '../../utils/routes'
+import { getDashboardPathForRole, ROUTES } from '../../utils/routes'
 
-/**
- * @param {{ role: 'hotel' | 'police' | 'admin'; children: import('react').ReactNode }} props
- */
+const VALID_ROLES = ['hotel', 'police', 'admin']
+
 export default function RequireRole({ role, children }) {
   const { user, isAuthenticated } = useAuth()
 
   if (!isAuthenticated || !user) {
-    return null
+    return <Navigate to={ROUTES.login} replace />
   }
 
-  if (user.role !== role) {
+  if (!VALID_ROLES.includes(user.role) || user.role !== role) {
     return <Navigate to={getDashboardPathForRole(user.role)} replace />
   }
 

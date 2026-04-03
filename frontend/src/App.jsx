@@ -1,13 +1,23 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import GuestOnly from './components/auth/GuestOnly'
+import HotelPropertyBar from './components/hotel/HotelPropertyBar'
 import RequireAuth from './components/auth/RequireAuth'
 import RequireRole from './components/auth/RequireRole'
 import RootRedirect from './components/auth/RootRedirect'
+import { HotelScopeProvider } from './context/HotelScopeProvider'
 import DashboardLayout from './components/layout/DashboardLayout'
 import AdminDashboard from './pages/AdminDashboard'
-import HotelDashboard from './pages/HotelDashboard'
+import AdminHotelsPage from './pages/admin/AdminHotelsPage'
+import AdminUsersPage from './pages/admin/AdminUsersPage'
+import GuestListPage from './pages/hotel/GuestListPage'
+import HotelAlertsPage from './pages/hotel/HotelAlertsPage'
+import HotelDashboardPage from './pages/hotel/HotelDashboardPage'
+import RegisterGuestPage from './pages/hotel/RegisterGuestPage'
 import LoginPage from './pages/LoginPage'
-import PoliceDashboard from './pages/PoliceDashboard'
+import PoliceAlertsPage from './pages/police/PoliceAlertsPage'
+import PoliceBlacklistPage from './pages/police/PoliceBlacklistPage'
+import PoliceDashboardPage from './pages/police/PoliceDashboardPage'
+import PoliceGuestSearchPage from './pages/police/PoliceGuestSearchPage'
 import { ROUTES } from './utils/routes'
 
 export default function App() {
@@ -29,13 +39,18 @@ export default function App() {
         element={
           <RequireAuth>
             <RequireRole role="hotel">
-              <DashboardLayout portal="hotel" />
+              <HotelScopeProvider>
+                <DashboardLayout portal="hotel" topSlot={<HotelPropertyBar />} />
+              </HotelScopeProvider>
             </RequireRole>
           </RequireAuth>
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<HotelDashboard />} />
+        <Route path="dashboard" element={<HotelDashboardPage />} />
+        <Route path="guests/register" element={<RegisterGuestPage />} />
+        <Route path="guests" element={<GuestListPage />} />
+        <Route path="alerts" element={<HotelAlertsPage />} />
       </Route>
 
       <Route
@@ -49,7 +64,10 @@ export default function App() {
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<PoliceDashboard />} />
+        <Route path="dashboard" element={<PoliceDashboardPage />} />
+        <Route path="guests" element={<PoliceGuestSearchPage />} />
+        <Route path="alerts" element={<PoliceAlertsPage />} />
+        <Route path="blacklist" element={<PoliceBlacklistPage />} />
       </Route>
 
       <Route
@@ -64,6 +82,8 @@ export default function App() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="hotels" element={<AdminHotelsPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
       </Route>
 
       <Route path="*" element={<RootRedirect />} />

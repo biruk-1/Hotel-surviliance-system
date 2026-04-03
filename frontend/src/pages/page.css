@@ -33,6 +33,16 @@
   font-size: 0.9rem;
 }
 
+.page__link {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.page__link:hover {
+  color: var(--text);
+}
+
 .page__code {
   font-size: 0.85em;
   padding: 0.08rem 0.3rem;

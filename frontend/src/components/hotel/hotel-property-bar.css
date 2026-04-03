@@ -1,0 +1,49 @@
+.hotel-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg-elevated);
+}
+
+.hotel-bar--muted {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.hotel-bar--error {
+  color: var(--danger-text);
+  font-size: 0.875rem;
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.hotel-bar__label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.hotel-bar__select {
+  min-width: 200px;
+  max-width: 100%;
+  padding: 0.4rem 0.5rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.hotel-bar__select:focus {
+  outline: none;
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--focus);
+}

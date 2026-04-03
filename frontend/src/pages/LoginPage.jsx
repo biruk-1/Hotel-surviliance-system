@@ -1,14 +1,17 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { loginRequest } from '../services/auth'
+import { login as loginWithApi } from '../services/authService'
 import { getApiErrorMessage } from '../utils/apiError'
-import { getDashboardPathForRole } from '../utils/routes'
+import { getPostLoginPath } from '../utils/routes'
+import { sanitizeEmail, stripControlChars } from '../utils/sanitize'
 import './login.css'
 
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = location.state?.from
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -19,9 +22,12 @@ export default function LoginPage() {
     setError('')
     setSubmitting(true)
     try {
-      const data = await loginRequest({ email: email.trim(), password })
+      const data = await loginWithApi({
+        email: sanitizeEmail(email),
+        password: stripControlChars(password),
+      })
       login({ token: data.token, user: data.user })
-      navigate(getDashboardPathForRole(data.user.role), { replace: true })
+      navigate(getPostLoginPath(data.user.role, from), { replace: true })
     } catch (err) {
       setError(getApiErrorMessage(err, 'Invalid email or password'))
     } finally {
