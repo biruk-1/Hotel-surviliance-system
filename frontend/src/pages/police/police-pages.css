@@ -16,6 +16,27 @@
   width: fit-content;
 }
 
+.police-bl-global-msg {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.police-bl-form-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.police-bl-submit-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .police-bl-section {
   margin-bottom: 2rem;
 }

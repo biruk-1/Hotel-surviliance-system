@@ -8,11 +8,26 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5001',
         changeOrigin: true,
+        configure(proxy) {
+          proxy.on('error', (err) => {
+            if (err.code === 'ECONNABORTED' || err.code === 'ECONNRESET') return
+            console.error(err)
+          })
+        },
       },
       '/socket.io': {
         target: 'http://localhost:5001',
         changeOrigin: true,
         ws: true,
+        configure(proxy) {
+          proxy.on('error', (err) => {
+            if (err.code === 'ECONNABORTED' || err.code === 'ECONNRESET') return
+            console.error(err)
+          })
+          proxy.on('proxyReqWs', (_proxyReq, _req, socket) => {
+            socket?.on?.('error', () => {})
+          })
+        },
       },
     },
   },

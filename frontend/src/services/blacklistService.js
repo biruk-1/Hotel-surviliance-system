@@ -1,8 +1,8 @@
 import { api, unwrapData, unwrapPaginated } from './api'
 
 /**
- * Top-level blacklist (police/admin). Optional hotelId filter.
- * @param {Record<string, string | number | undefined>} [params] hotelId, page, limit
+ * Global blacklist (police/admin). Query: page, limit.
+ * @param {Record<string, string | number | undefined>} [params]
  */
 export async function listBlacklist(params) {
   const res = await api.get('/blacklist', { params })
@@ -10,8 +10,8 @@ export async function listBlacklist(params) {
 }
 
 /**
- * Police only. Body includes hotelId.
- * @param {Record<string, unknown>} body name, idNumber, dateOfBirth, reason?, hotelId
+ * Police only. Global entry — do not send hotelId.
+ * Body: name, idNumber, dateOfBirth, reason (optional)
  */
 export async function createBlacklistEntry(body) {
   const res = await api.post('/blacklist', body)
@@ -19,28 +19,9 @@ export async function createBlacklistEntry(body) {
 }
 
 /**
- * @param {string} hotelId UUID
- * @param {Record<string, string | number | undefined>} [params] page, limit
- */
-export async function listBlacklistByHotel(hotelId, params) {
-  const res = await api.get(`/hotels/${hotelId}/blacklist`, { params })
-  return unwrapPaginated(res)
-}
-
-/**
- * @param {string} hotelId UUID
- * @param {Record<string, unknown>} body name, idNumber, dateOfBirth, reason?
- */
-export async function createBlacklistEntryForHotel(hotelId, body) {
-  const res = await api.post(`/hotels/${hotelId}/blacklist`, body)
-  return unwrapData(res)
-}
-
-/**
- * Police only.
- * @param {string} hotelId UUID
+ * Police/admin. Delete a global blacklist row by id.
  * @param {string} entryId Blacklist row UUID
  */
-export async function removeBlacklistEntry(hotelId, entryId) {
-  await api.delete(`/hotels/${hotelId}/blacklist/${entryId}`)
+export async function removeBlacklistEntry(entryId) {
+  await api.delete(`/blacklist/${entryId}`)
 }
