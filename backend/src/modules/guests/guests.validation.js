@@ -101,6 +101,8 @@ const guestIdParamRules = [
 
 const listGuestsQueryRules = [
   query('hotelId').optional().isUUID().withMessage('hotelId query must be a valid UUID'),
+  query('name').optional().trim().isLength({ max: 255 }).withMessage('name filter is too long'),
+  query('idNumber').optional().trim().isLength({ max: 120 }).withMessage('idNumber filter is too long'),
   ...paginationRules,
 ];
 

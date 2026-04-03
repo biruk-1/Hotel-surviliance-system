@@ -28,7 +28,7 @@ router.post(
   ...authScope,
   authorizeRoles('police'),
   writeOperationLimiter,
-  createBlacklistBodyRules({ requireHotelId: false }),
+  createBlacklistBodyRules(),
   validateRequest,
   asyncHandler(blacklistController.createBlacklistEntry)
 );

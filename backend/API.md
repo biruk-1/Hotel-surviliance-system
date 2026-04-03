@@ -152,61 +152,56 @@ Creates a **guest** and a **stay** in one transaction. May trigger blacklist mat
 
 ---
 
-## 6. Blacklist (top-level)
+## 6. Blacklist (global)
+
+Entries apply **system-wide**: guest registration checks the full blacklist regardless of hotel.  
+`id_number` is unique across the system.
 
 ### `GET /blacklist`
 
 - **Auth:** Bearer — **`police`** or **`admin`**  
-- **Query (optional):** `hotelId=<uuid>` — only that hotel’s entries; omit for all (up to limit).  
+- **Query (optional):** pagination (`page`, `limit`) per API defaults.  
 
-**Examples:**
-
-- `GET {{baseUrl}}/blacklist`  
-- `GET {{baseUrl}}/blacklist?hotelId={{hotelId}}`  
+**Example:** `GET {{baseUrl}}/blacklist`
 
 ### `POST /blacklist`
 
 - **Auth:** Bearer — **`police`** only  
-- **Body (JSON):**
+- **Body (JSON):** do **not** send `hotelId`.  
 
 ```json
 {
-  "hotelId": "00000000-0000-0000-0000-000000000001",
-  "name": "John Blacklisted",
+  "name": "John Doe",
   "idNumber": "ID-12345",
   "dateOfBirth": "1985-03-20",
-  "reason": "Security hold"
+  "reason": "Suspicious activity"
 }
 ```
 
+### `DELETE /blacklist/:id`
+
+- **Auth:** Bearer — **`police`** or **`admin`**  
+- **Path:** `:id` = blacklist row UUID  
+
 ---
 
-## 7. Blacklist (under hotel)
+## 7. Blacklist (legacy — hotel-scoped routes)
+
+Optional nested routes still exist for tooling; prefer **§6** for police UI.
 
 Base: **`/hotels/:hotelId/blacklist`**
 
 ### `GET /hotels/:hotelId/blacklist`
 
-- **Auth:** Bearer — **`police`** or **`admin`**  
+- **Auth:** Bearer — **`police`** or **`admin`** — lists entries for that hotel only.  
 
 ### `POST /hotels/:hotelId/blacklist`
 
-- **Auth:** Bearer — **`police`** only  
-- **Body (JSON):** same fields as top-level **POST** but **omit `hotelId`** (it comes from the URL).  
-
-```json
-{
-  "name": "John Blacklisted",
-  "idNumber": "ID-12345",
-  "dateOfBirth": "1985-03-20",
-  "reason": "Optional"
-}
-```
+- **Auth:** Bearer — **`police`** only — `hotel_id` is taken from the URL.  
 
 ### `DELETE /hotels/:hotelId/blacklist/:id`
 
 - **Auth:** Bearer — **`police`** only  
-- **Path:** `:id` = blacklist row UUID  
 
 ---
 

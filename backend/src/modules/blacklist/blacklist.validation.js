@@ -1,8 +1,8 @@
-const { body, query } = require('express-validator');
+const { body, param } = require('express-validator');
 const { paginationRules } = require('../guests/guests.validation');
 
 const createBlacklistBodyRules = (options = {}) => {
-  const { requireHotelId = false } = options;
+  const { optionalHotelId = false } = options;
   const rules = [
     body('name')
       .trim()
@@ -23,18 +23,20 @@ const createBlacklistBodyRules = (options = {}) => {
       .withMessage('dateOfBirth must be a valid date (e.g. YYYY-MM-DD or ISO 8601)'),
     body('reason').optional().isString().isLength({ max: 2000 }),
   ];
-  if (requireHotelId) {
-    rules.unshift(body('hotelId').isUUID().withMessage('hotelId must be a valid UUID'));
+  if (optionalHotelId) {
+    rules.push(
+      body('hotelId').optional({ values: 'falsy' }).isUUID().withMessage('hotelId must be a valid UUID')
+    );
   }
   return rules;
 };
 
-const listBlacklistQueryRules = [
-  query('hotelId').optional().isUUID().withMessage('hotelId must be a valid UUID'),
-  ...paginationRules,
-];
+const listBlacklistQueryRules = [...paginationRules];
+
+const blacklistIdParamRules = [param('id').isUUID().withMessage('id must be a valid UUID')];
 
 module.exports = {
   createBlacklistBodyRules,
   listBlacklistQueryRules,
+  blacklistIdParamRules,
 };

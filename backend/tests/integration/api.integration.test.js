@@ -351,7 +351,6 @@ describeApi('API integration (auth, guests, stays, alerts, blacklist)', () => {
         .post('/api/blacklist')
         .set(bearer(tokens.hotelA))
         .send({
-          hotelId: IDS.hotelA,
           name: 'Blocked',
           idNumber: `BL-H-${Date.now()}`,
           dateOfBirth: '1980-01-01',
@@ -359,20 +358,19 @@ describeApi('API integration (auth, guests, stays, alerts, blacklist)', () => {
       expect(res.status).toBe(403);
     });
 
-    it('POST /api/blacklist creates entry for police', async () => {
+    it('POST /api/blacklist creates global entry for police', async () => {
       const idNumber = `BL-OK-${Date.now()}`;
       const res = await request(app)
         .post('/api/blacklist')
         .set(bearer(tokens.police))
         .send({
-          hotelId: IDS.hotelA,
           name: 'Blocked Person',
           idNumber,
           dateOfBirth: '1985-03-20',
           reason: 'Integration test',
         });
       expect(res.status).toBe(201);
-      expect(res.body.data.entry.hotel_id).toBe(IDS.hotelA);
+      expect(res.body.data.entry.hotel_id).toBeNull();
     });
 
     it('POST /api/blacklist returns 400 for invalid input', async () => {
@@ -380,7 +378,6 @@ describeApi('API integration (auth, guests, stays, alerts, blacklist)', () => {
         .post('/api/blacklist')
         .set(bearer(tokens.police))
         .send({
-          hotelId: IDS.hotelA,
           name: '',
           idNumber: 'X',
           dateOfBirth: '1985-03-20',
@@ -388,10 +385,9 @@ describeApi('API integration (auth, guests, stays, alerts, blacklist)', () => {
       expect(res.status).toBe(400);
     });
 
-    it('POST /api/blacklist returns 409 for duplicate id per hotel', async () => {
+    it('POST /api/blacklist returns 409 for duplicate id number', async () => {
       const idNumber = `BL-DUP-${Date.now()}`;
       const payload = {
-        hotelId: IDS.hotelA,
         name: 'Dup Test',
         idNumber,
         dateOfBirth: '1991-01-01',
@@ -400,6 +396,23 @@ describeApi('API integration (auth, guests, stays, alerts, blacklist)', () => {
       expect(first.status).toBe(201);
       const second = await request(app).post('/api/blacklist').set(bearer(tokens.police)).send(payload);
       expect(second.status).toBe(409);
+    });
+
+    it('DELETE /api/blacklist/:id returns 204 for police', async () => {
+      const created = await request(app)
+        .post('/api/blacklist')
+        .set(bearer(tokens.police))
+        .send({
+          name: 'To Delete',
+          idNumber: `BL-DEL-${Date.now()}`,
+          dateOfBirth: '1990-06-15',
+        });
+      expect(created.status).toBe(201);
+      const entryId = created.body.data.entry.id;
+      const del = await request(app).delete(`/api/blacklist/${entryId}`).set(bearer(tokens.police));
+      expect(del.status).toBe(204);
+      const again = await request(app).delete(`/api/blacklist/${entryId}`).set(bearer(tokens.police));
+      expect(again.status).toBe(404);
     });
   });
 

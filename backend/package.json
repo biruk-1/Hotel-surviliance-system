@@ -10,7 +10,8 @@
     "test:watch": "jest --runInBand --watch",
     "test:coverage": "jest --runInBand --coverage",
     "perf": "node scripts/perf/load-test.js",
-    "perf:test": "node scripts/perf/load-test.js"
+    "perf:test": "node scripts/perf/load-test.js",
+    "migrate:blacklist": "node scripts/apply-migration-005-blacklist.js"
   },
   "engines": {
     "node": ">=18"

@@ -1,6 +1,6 @@
 const db = require('../config/database');
 const { writeAuditLog, AUDIT_ACTIONS, ENTITY_TYPES } = require('../utils/auditLog');
-const { emitNewAlertToPolice } = require('../socket/socket.server');
+const { emitNewAlert } = require('../socket/socket.server');
 
 const ALERT_THRESHOLD = 70;
 
@@ -57,7 +57,7 @@ async function createBlacklistMatchAlert({
     req,
   });
 
-  emitNewAlertToPolice(alert);
+  emitNewAlert(alert);
 
   return alert;
 }

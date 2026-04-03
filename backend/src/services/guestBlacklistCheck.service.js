@@ -3,16 +3,14 @@ const { evaluateGuestAgainstBlacklist } = require('./matching.service');
 const { createBlacklistMatchAlert, ALERT_THRESHOLD } = require('./alert.service');
 
 /**
- * After a guest + stay are committed: check hotel blacklist and create alert if score > 70.
+ * After a guest + stay are committed: check global blacklist and create alert if score > 70.
  * Does not throw (logs errors) so guest creation always succeeds.
  */
 async function runBlacklistCheckForNewGuest({ guest, stay, hotelId, userId, req }) {
   try {
     const { rows: blacklistRows } = await db.query(
       `SELECT id, hotel_id, full_name, id_number, date_of_birth, reason
-       FROM blacklist
-       WHERE hotel_id = $1`,
-      [hotelId]
+       FROM blacklist`
     );
 
     if (blacklistRows.length === 0) return null;

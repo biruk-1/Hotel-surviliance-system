@@ -1,9 +1,16 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const config = require('../config');
+const db = require('../config/database');
 const logger = require('../utils/logger');
 
 let io = null;
+
+const POLICE_ROOM = 'police';
+
+function hotelRoomId(hotelId) {
+  return `hotel:${hotelId}`;
+}
 
 function extractToken(socket) {
   const authToken = socket.handshake.auth && socket.handshake.auth.token;
@@ -18,7 +25,8 @@ function extractToken(socket) {
 
 /**
  * Attach Socket.io to the same HTTP server as Express.
- * Only users with JWT role `police` can connect; others are rejected at handshake.
+ * Handshake: JWT required. Roles `police` and `admin` join `police` room (all alerts).
+ * Role `hotel` joins `hotel:<uuid>` for each property in `hotel_users`.
  */
 function initSocketServer(httpServer) {
   const origin = process.env.SOCKET_CORS_ORIGIN || process.env.CORS_ORIGIN || '*';
@@ -42,7 +50,8 @@ function initSocketServer(httpServer) {
 
       const payload = jwt.verify(token, config.auth.jwtSecret);
 
-      if (payload.role !== 'police') {
+      const allowed = ['police', 'admin', 'hotel'];
+      if (!allowed.includes(payload.role)) {
         return next(new Error('forbidden'));
       }
 
@@ -61,30 +70,68 @@ function initSocketServer(httpServer) {
     }
   });
 
-  io.on('connection', (socket) => {
-    logger.info('Police socket connected', { userId: socket.data.user.id });
+  io.on('connection', async (socket) => {
+    const { id: userId, role } = socket.data.user;
+    try {
+      if (role === 'police' || role === 'admin') {
+        await socket.join(POLICE_ROOM);
+      } else if (role === 'hotel') {
+        const { rows } = await db.query(
+          `SELECT hotel_id FROM hotel_users WHERE user_id = $1`,
+          [userId]
+        );
+        for (const row of rows) {
+          await socket.join(hotelRoomId(row.hotel_id));
+        }
+      }
+      logger.info('Socket connected', { userId, role, rooms: roomsForLog(socket) });
+    } catch (err) {
+      logger.error('Socket room join failed', { userId, err });
+      socket.disconnect(true);
+      return;
+    }
+
     socket.on('disconnect', (reason) => {
-      logger.info('Police socket disconnected', { userId: socket.data.user.id, reason });
+      logger.info('Socket disconnected', { userId, reason });
     });
   });
 
-  logger.info('Socket.io ready (police-only); event: new_alert');
+  logger.info('Socket.io ready; event: new_alert (rooms: police, hotel:<id>)');
   return io;
 }
 
+function roomsForLog(socket) {
+  try {
+    return Array.from(socket.rooms).filter((r) => r !== socket.id);
+  } catch {
+    return [];
+  }
+}
+
 /**
- * Broadcast a newly created alert to all connected police clients.
+ * Push a newly created alert to police/admin clients and to the hotel room for that property.
  */
-function emitNewAlertToPolice(alert) {
+function emitNewAlert(alert) {
   if (!io) {
-    logger.warn('emitNewAlertToPolice: Socket.io not initialized');
+    logger.warn('emitNewAlert: Socket.io not initialized');
+    return;
+  }
+  if (!alert || !alert.hotel_id) {
+    logger.warn('emitNewAlert: alert missing hotel_id');
     return;
   }
   try {
-    io.emit('new_alert', { alert });
+    const payload = { alert };
+    io.to(POLICE_ROOM).emit('new_alert', payload);
+    io.to(hotelRoomId(alert.hotel_id)).emit('new_alert', payload);
   } catch (err) {
-    logger.error('emitNewAlertToPolice failed', err);
+    logger.error('emitNewAlert failed', err);
   }
+}
+
+/** @deprecated Use emitNewAlert */
+function emitNewAlertToPolice(alert) {
+  emitNewAlert(alert);
 }
 
 /**
@@ -99,6 +146,7 @@ async function closeSocketServer() {
 
 module.exports = {
   initSocketServer,
+  emitNewAlert,
   emitNewAlertToPolice,
   closeSocketServer,
 };

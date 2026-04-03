@@ -158,7 +158,7 @@ This document describes everything implemented in the **Node.js + Express + Post
 
 ### Blacklist matching (on new guest + stay)
 
-1. After commit, service loads **blacklist** rows for that **hotel**.
+1. After commit, service loads **all blacklist** rows (global check; legacy rows may still have `hotel_id` set).
 2. **Matching** computes best score per row; if **> 70**, an **alert** is inserted and **audit** logs `alert_created`.
 
 ### Audit logging
@@ -167,7 +167,7 @@ Successful **login**, **guest_created**, **blacklist_created**, **alert_created*
 
 ### Database schema (summary)
 
-Key tables: `users`, `hotels`, `hotel_users`, `guests` (incl. optional `date_of_birth`), `stays` (incl. `created_by_user_id`), `documents`, `blacklist`, `alerts`, `audit_logs`. See `sql/schema.sql` and migrations for exact columns and triggers.
+Key tables: `users`, `hotels`, `hotel_users`, `guests` (incl. optional `date_of_birth`), `stays` (incl. `created_by_user_id`), `documents`, `blacklist` (global entries use `hotel_id` NULL; unique `id_number`), `alerts`, `audit_logs`. See `sql/schema.sql` and migrations (`005_blacklist_global.sql` upgrades older DBs) for exact columns and triggers.
 
 ---
 

@@ -8,6 +8,32 @@ const { paginationMeta } = require('../../middlewares/pagination.middleware');
 
 const GUEST_FIELDS = `id, full_name, id_number, date_of_birth, phone, email, notes, created_at, updated_at`;
 
+function getNameIdSearchFromQuery(req) {
+  const nameRaw = req.query.name;
+  const idRaw = req.query.idNumber;
+  const name = nameRaw != null && String(nameRaw).trim() !== '' ? String(nameRaw).trim() : null;
+  const idNumber = idRaw != null && String(idRaw).trim() !== '' ? String(idRaw).trim() : null;
+  return { name, idNumber };
+}
+
+function buildNameIdFilterSql(name, idNumber, paramStart) {
+  const parts = [];
+  const params = [];
+  let idx = paramStart;
+  if (name) {
+    parts.push(`g.full_name ILIKE $${idx}`);
+    params.push(`%${name}%`);
+    idx += 1;
+  }
+  if (idNumber) {
+    parts.push(`g.id_number ILIKE $${idx}`);
+    params.push(`%${idNumber}%`);
+    idx += 1;
+  }
+  const sql = parts.length ? ` AND ${parts.join(' AND ')}` : '';
+  return { sql, params, nextIdx: idx };
+}
+
 function parseGuestDob(value) {
   if (value == null || value === '') return null;
   const d = new Date(value);
@@ -131,7 +157,19 @@ async function listGuests(req, res, next) {
     const { limit, offset, page } = req.pagination;
 
     if (role === 'police' || role === 'admin') {
+      const { name, idNumber } = getNameIdSearchFromQuery(req);
+
       if (hotelIdFilter) {
+        const { sql: searchSql, params: searchParams, nextIdx } = buildNameIdFilterSql(
+          name,
+          idNumber,
+          2
+        );
+        const limitIdx = nextIdx;
+        const offsetIdx = nextIdx + 1;
+        const dataParams = [hotelIdFilter, ...searchParams, limit, offset];
+        const countParams = [hotelIdFilter, ...searchParams];
+
         const [dataRes, countRes] = await Promise.all([
           db.query(
             `SELECT ${GUEST_FIELDS}
@@ -139,16 +177,18 @@ async function listGuests(req, res, next) {
              WHERE EXISTS (
                SELECT 1 FROM stays s WHERE s.guest_id = g.id AND s.hotel_id = $1
              )
+             ${searchSql}
              ORDER BY g.created_at DESC
-             LIMIT $2 OFFSET $3`,
-            [hotelIdFilter, limit, offset]
+             LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+            dataParams
           ),
           db.query(
             `SELECT COUNT(*) AS total FROM guests g
              WHERE EXISTS (
                SELECT 1 FROM stays s WHERE s.guest_id = g.id AND s.hotel_id = $1
-             )`,
-            [hotelIdFilter]
+             )
+             ${searchSql}`,
+            countParams
           ),
         ]);
         const total = parseInt(countRes.rows[0].total, 10);
@@ -159,12 +199,32 @@ async function listGuests(req, res, next) {
         });
       }
 
+      const { sql: searchSql, params: searchParams, nextIdx } = buildNameIdFilterSql(
+        name,
+        idNumber,
+        1
+      );
+      const limitIdx = nextIdx;
+      const offsetIdx = nextIdx + 1;
+      const dataParams = [...searchParams, limit, offset];
+      const countParams = [...searchParams];
+
       const [dataRes, countRes] = await Promise.all([
         db.query(
-          `SELECT ${GUEST_FIELDS} FROM guests ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
-          [limit, offset]
+          `SELECT ${GUEST_FIELDS}
+           FROM guests g
+           WHERE 1 = 1
+           ${searchSql}
+           ORDER BY g.created_at DESC
+           LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+          dataParams
         ),
-        db.query(`SELECT COUNT(*) AS total FROM guests`),
+        db.query(
+          `SELECT COUNT(*) AS total FROM guests g
+           WHERE 1 = 1
+           ${searchSql}`,
+          countParams
+        ),
       ]);
       const total = parseInt(countRes.rows[0].total, 10);
       return res.json({

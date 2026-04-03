@@ -327,15 +327,13 @@ async function createStay(overrides = {}) {
 
 /**
  * Insert one blacklist entry and return it.
- * @param {{hotelId: string} & Partial<{
- *   id:string, fullName:string, idNumber:string,
+ * @param {Partial<{
+ *   id:string, hotelId:string|null, fullName:string, idNumber:string,
  *   dateOfBirth:string, reason:string, createdByUserId:string
  * }>} overrides
  * @returns {Promise<object>}
  */
 async function createBlacklistEntry(overrides = {}) {
-  if (!overrides.hotelId) throw new TypeError('createBlacklistEntry: hotelId is required');
-
   const idNumber = overrides.idNumber
     ?? `BL-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -352,7 +350,7 @@ async function createBlacklistEntry(overrides = {}) {
      ) RETURNING *`,
     [
       overrides.id              ?? null,
-      overrides.hotelId,
+      overrides.hotelId       ?? null,
       overrides.fullName        ?? null,
       idNumber,
       overrides.dateOfBirth     ?? null,

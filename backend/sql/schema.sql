@@ -164,11 +164,11 @@ CREATE TRIGGER trg_documents_updated_at
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
 
 -- -----------------------------------------------------------------------------
--- blacklist — blocked id numbers per hotel (no duplicate per hotel)
+-- blacklist — global registry (hotel_id optional for legacy rows; unique id_number)
 -- -----------------------------------------------------------------------------
 CREATE TABLE blacklist (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  hotel_id UUID NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+  hotel_id UUID REFERENCES hotels(id) ON DELETE CASCADE,
   full_name VARCHAR(255) NOT NULL,
   id_number VARCHAR(120) NOT NULL,
   date_of_birth DATE,
@@ -176,7 +176,7 @@ CREATE TABLE blacklist (
   created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT blacklist_hotel_id_number_uniq UNIQUE (hotel_id, id_number)
+  CONSTRAINT blacklist_id_number_uniq UNIQUE (id_number)
 );
 
 CREATE INDEX idx_blacklist_id_number ON blacklist (id_number);

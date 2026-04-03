@@ -14,24 +14,7 @@ function parseDateOnly(value) {
 
 async function listAllBlacklist(req, res, next) {
   try {
-    const hotelId = req.query.hotelId;
     const { limit, offset, page } = req.pagination;
-
-    if (hotelId) {
-      const [dataRes, countRes] = await Promise.all([
-        db.query(
-          `SELECT ${BL_FIELDS} FROM blacklist WHERE hotel_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
-          [hotelId, limit, offset]
-        ),
-        db.query(`SELECT COUNT(*) AS total FROM blacklist WHERE hotel_id = $1`, [hotelId]),
-      ]);
-      const total = parseInt(countRes.rows[0].total, 10);
-      return res.json({
-        success: true,
-        data: { hotelId, entries: dataRes.rows },
-        pagination: paginationMeta(total, { page, limit }),
-      });
-    }
 
     const [dataRes, countRes] = await Promise.all([
       db.query(
@@ -76,11 +59,12 @@ async function listBlacklistByHotel(req, res, next) {
 
 async function createBlacklistEntry(req, res, next) {
   try {
-    const hotelId = req.params.hotelId || req.body.hotelId;
-    if (!hotelId) {
-      next(new HttpError(400, 'hotelId is required'));
-      return;
-    }
+    const fromParam = req.params.hotelId;
+    const fromBody = req.body?.hotelId;
+    const hotelId =
+      fromParam ||
+      (fromBody != null && String(fromBody).trim() !== '' ? String(fromBody).trim() : null) ||
+      null;
 
     const { name, idNumber, dateOfBirth, reason } = req.body;
     const dob = parseDateOnly(dateOfBirth);
@@ -99,7 +83,7 @@ async function createBlacklistEntry(req, res, next) {
     const entry = rows[0];
     await writeAuditLog({
       actorUserId: req.user.id,
-      hotelId,
+      hotelId: entry.hotel_id || null,
       action: AUDIT_ACTIONS.BLACKLIST_CREATED,
       entityType: ENTITY_TYPES.BLACKLIST,
       entityId: entry.id,
@@ -110,7 +94,17 @@ async function createBlacklistEntry(req, res, next) {
     res.status(201).json({ success: true, data: { entry } });
   } catch (err) {
     if (err.code === '23505') {
-      next(new HttpError(409, 'This ID number is already blacklisted for this hotel'));
+      next(new HttpError(409, 'This ID number is already on the blacklist'));
+      return;
+    }
+    // Old DBs: blacklist.hotel_id was NOT NULL; global entries use NULL — migration required.
+    if (err.code === '23502' && /hotel_id/i.test(String(err.message || err.detail || ''))) {
+      next(
+        new HttpError(
+          500,
+          'Database needs migration 005: run `npm run migrate:blacklist` from the backend folder (or apply sql/migrations/005_blacklist_global.sql), then restart the API.'
+        )
+      );
       return;
     }
     next(err);
@@ -134,9 +128,25 @@ async function removeBlacklistEntry(req, res, next) {
   }
 }
 
+/** DELETE /blacklist/:id — police/admin; no hotel scope required */
+async function removeBlacklistEntryById(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { rowCount } = await db.query(`DELETE FROM blacklist WHERE id = $1`, [id]);
+    if (rowCount === 0) {
+      next(new HttpError(404, 'Blacklist entry not found'));
+      return;
+    }
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listAllBlacklist,
   listBlacklistByHotel,
   createBlacklistEntry,
   removeBlacklistEntry,
+  removeBlacklistEntryById,
 };
