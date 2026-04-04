@@ -3,7 +3,13 @@ const { authenticate } = require('../../middlewares/auth.middleware');
 const { authorizeRoles } = require('../../middlewares/rbac.middleware');
 const validateRequest = require('../../middlewares/validate.middleware');
 const adminController = require('./admin.controller');
-const { createUserRules, listUsersRules } = require('./admin.validation');
+const {
+  createUserRules,
+  listUsersRules,
+  updateUserRules,
+  updatePasswordRules,
+  deleteUserRules,
+} = require('./admin.validation');
 const { asyncHandler } = require('../../utils/asyncHandler');
 
 const router = express.Router();
@@ -22,6 +28,27 @@ router.post(
   createUserRules,
   validateRequest,
   asyncHandler(adminController.createUser)
+);
+
+router.patch(
+  '/users/:id',
+  updateUserRules,
+  validateRequest,
+  asyncHandler(adminController.updateUser)
+);
+
+router.patch(
+  '/users/:id/password',
+  updatePasswordRules,
+  validateRequest,
+  asyncHandler(adminController.updateUserPassword)
+);
+
+router.delete(
+  '/users/:id',
+  deleteUserRules,
+  validateRequest,
+  asyncHandler(adminController.deleteUser)
 );
 
 module.exports = router;

@@ -49,6 +49,113 @@ async function createHotel(req, res, next) {
   }
 }
 
+async function updateHotel(req, res, next) {
+  try {
+    const { hotelId } = req.params;
+    const { name, addressLine1, city, country, phone } = req.body;
+
+    const existing = await db.query(
+      `SELECT id FROM hotels WHERE id = $1 LIMIT 1`,
+      [hotelId]
+    );
+    if (existing.rows.length === 0) {
+      next(new HttpError(404, 'Hotel not found'));
+      return;
+    }
+
+    const setClauses = [];
+    const params = [];
+
+    if (name !== undefined) {
+      params.push(name.trim());
+      setClauses.push(`name = $${params.length}`);
+    }
+    if (addressLine1 !== undefined) {
+      params.push(addressLine1?.trim() || null);
+      setClauses.push(`address_line1 = $${params.length}`);
+    }
+    if (city !== undefined) {
+      params.push(city?.trim() || null);
+      setClauses.push(`city = $${params.length}`);
+    }
+    if (country !== undefined) {
+      params.push(country?.trim() || null);
+      setClauses.push(`country = $${params.length}`);
+    }
+    if (phone !== undefined) {
+      params.push(phone?.trim() || null);
+      setClauses.push(`phone = $${params.length}`);
+    }
+
+    if (setClauses.length === 0) {
+      next(new HttpError(400, 'No fields provided to update'));
+      return;
+    }
+
+    // Always bump updated_at
+    setClauses.push(`updated_at = NOW()`);
+
+    params.push(hotelId);
+    const { rows } = await db.query(
+      `UPDATE hotels
+       SET ${setClauses.join(', ')}
+       WHERE id = $${params.length}
+       RETURNING id, name, address_line1, city, country, phone, created_at, updated_at`,
+      params
+    );
+
+    res.json({ success: true, data: { hotel: mapHotelRow(rows[0]) } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteHotel(req, res, next) {
+  try {
+    const { hotelId } = req.params;
+
+    const existing = await db.query(
+      `SELECT id FROM hotels WHERE id = $1 LIMIT 1`,
+      [hotelId]
+    );
+    if (existing.rows.length === 0) {
+      next(new HttpError(404, 'Hotel not found'));
+      return;
+    }
+
+    // Check for active stays before deleting
+    const activeStays = await db.query(
+      `SELECT COUNT(*)::int AS c FROM stays WHERE hotel_id = $1 AND status = 'active'`,
+      [hotelId]
+    );
+    if (activeStays.rows[0].c > 0) {
+      next(
+        new HttpError(
+          409,
+          `Cannot delete hotel: ${activeStays.rows[0].c} active stay(s) still in progress. Check out all guests first.`
+        )
+      );
+      return;
+    }
+
+    await db.query(`DELETE FROM hotels WHERE id = $1`, [hotelId]);
+
+    res.status(204).send();
+  } catch (err) {
+    // FK violation — associated data still exists
+    if (err.code === '23503') {
+      next(
+        new HttpError(
+          409,
+          'Cannot delete hotel: it still has associated guests, stays, or alerts. Remove them first.'
+        )
+      );
+      return;
+    }
+    next(err);
+  }
+}
+
 async function listHotelUsers(req, res, next) {
   try {
     const { hotelId } = req.params;
@@ -198,6 +305,8 @@ async function getHotelStats(req, res, next) {
 module.exports = {
   listAllHotels,
   createHotel,
+  updateHotel,
+  deleteHotel,
   listHotelUsers,
   assignUserToHotel,
   listMyAssignments,

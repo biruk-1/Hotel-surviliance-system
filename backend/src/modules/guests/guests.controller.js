@@ -8,6 +8,23 @@ const { paginationMeta } = require('../../middlewares/pagination.middleware');
 
 const GUEST_FIELDS = `id, full_name, id_number, date_of_birth, phone, email, notes, created_at, updated_at`;
 
+/** Guest columns with table alias (for JOIN queries). */
+const GUEST_CORE = `g.id, g.full_name, g.id_number, g.date_of_birth, g.phone, g.email, g.notes, g.created_at, g.updated_at`;
+
+/** Prefer active stay, then most recent check-in — for “where is this guest now”. */
+const PRIMARY_STAY_JOIN = `
+LEFT JOIN LATERAL (
+  SELECT s.hotel_id, s.room_number, s.check_in, s.status
+  FROM stays s
+  WHERE s.guest_id = g.id
+  ORDER BY (CASE WHEN s.status = 'active' THEN 0 ELSE 1 END), s.check_in DESC NULLS LAST
+  LIMIT 1
+) ps ON TRUE
+LEFT JOIN hotels ph ON ph.id = ps.hotel_id
+`;
+
+const GUEST_LIST_SELECT = `${GUEST_CORE}, ph.name AS primary_hotel_name, ps.room_number AS primary_room_number, ps.check_in AS primary_check_in, ps.status AS primary_stay_status`;
+
 function getNameIdSearchFromQuery(req) {
   const nameRaw = req.query.name;
   const idRaw = req.query.idNumber;
@@ -172,8 +189,9 @@ async function listGuests(req, res, next) {
 
         const [dataRes, countRes] = await Promise.all([
           db.query(
-            `SELECT ${GUEST_FIELDS}
+            `SELECT ${GUEST_LIST_SELECT}
              FROM guests g
+             ${PRIMARY_STAY_JOIN}
              WHERE EXISTS (
                SELECT 1 FROM stays s WHERE s.guest_id = g.id AND s.hotel_id = $1
              )
@@ -211,8 +229,9 @@ async function listGuests(req, res, next) {
 
       const [dataRes, countRes] = await Promise.all([
         db.query(
-          `SELECT ${GUEST_FIELDS}
+          `SELECT ${GUEST_LIST_SELECT}
            FROM guests g
+           ${PRIMARY_STAY_JOIN}
            WHERE 1 = 1
            ${searchSql}
            ORDER BY g.created_at DESC
@@ -250,8 +269,9 @@ async function listGuests(req, res, next) {
         }
         const [dataRes, countRes] = await Promise.all([
           db.query(
-            `SELECT ${GUEST_FIELDS}
+            `SELECT ${GUEST_LIST_SELECT}
              FROM guests g
+             ${PRIMARY_STAY_JOIN}
              WHERE EXISTS (
                SELECT 1 FROM stays s WHERE s.guest_id = g.id AND s.hotel_id = $1
              )
@@ -277,8 +297,9 @@ async function listGuests(req, res, next) {
 
       const [dataRes, countRes] = await Promise.all([
         db.query(
-          `SELECT ${GUEST_FIELDS}
+          `SELECT ${GUEST_LIST_SELECT}
            FROM guests g
+           ${PRIMARY_STAY_JOIN}
            WHERE EXISTS (
              SELECT 1 FROM stays s
              WHERE s.guest_id = g.id AND s.hotel_id = ANY($1::uuid[])
@@ -325,8 +346,10 @@ async function getGuestById(req, res, next) {
       if (!ids || ids.length === 0) throw new HttpError(404, 'Guest not found');
       staysRes = await db.query(
         `SELECT s.id, s.hotel_id, s.created_by_user_id, s.check_in, s.check_out,
-                s.room_number, s.status, s.created_at, s.updated_at
+                s.room_number, s.status, s.created_at, s.updated_at,
+                h.name AS hotel_name
          FROM stays s
+         LEFT JOIN hotels h ON h.id = s.hotel_id
          WHERE s.guest_id = $1 AND s.hotel_id = ANY($2::uuid[])
          ORDER BY s.check_in DESC`,
         [id, ids]
@@ -334,8 +357,10 @@ async function getGuestById(req, res, next) {
     } else {
       staysRes = await db.query(
         `SELECT s.id, s.hotel_id, s.created_by_user_id, s.check_in, s.check_out,
-                s.room_number, s.status, s.created_at, s.updated_at
+                s.room_number, s.status, s.created_at, s.updated_at,
+                h.name AS hotel_name
          FROM stays s
+         LEFT JOIN hotels h ON h.id = s.hotel_id
          WHERE s.guest_id = $1
          ORDER BY s.check_in DESC`,
         [id]

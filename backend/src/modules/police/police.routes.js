@@ -13,4 +13,11 @@ router.get(
   asyncHandler(policeController.getDashboardStats)
 );
 
+router.get(
+  '/hotels',
+  authenticate,
+  authorizeRoles('police'),
+  asyncHandler(policeController.listHotelsForLookup)
+);
+
 module.exports = router;

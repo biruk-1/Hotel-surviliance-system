@@ -1,51 +1,245 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import InlineSpinner from '../../components/common/InlineSpinner'
+import { AlertCircle, Plus, Loader2, Building2, Users, Pencil, Trash2 } from 'lucide-react'
 import {
-  assignUserToHotel,
-  createHotel,
-  listAllHotels,
-  listHotelUsers,
+  assignUserToHotel, createHotel, listAllHotels, listHotelUsers,
+  updateHotel, deleteHotel,
 } from '../../services/hotelService'
 import { listUsers } from '../../services/adminService'
 import { getApiErrorMessage } from '../../utils/apiError'
-import '../page.css'
-import '../hotel/hotel-pages.css'
-import './admin-pages.css'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  DialogFooter, DialogClose, DialogTrigger,
+} from '@/components/ui/dialog'
 
 const PHONE_RE = /^\+?[0-9()\-.\s]{7,20}$/
 
-export default function AdminHotelsPage() {
-  const [hotels, setHotels] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [listError, setListError] = useState(null)
-
+/* ── Create Hotel Dialog ── */
+function CreateHotelDialog({ onCreated }) {
+  const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [addressLine1, setAddressLine1] = useState('')
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
   const [phone, setPhone] = useState('')
-  const [createSubmitting, setCreateSubmitting] = useState(false)
-  const [createError, setCreateError] = useState(null)
-  const [createSuccess, setCreateSuccess] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
 
-  const [selectedHotelId, setSelectedHotelId] = useState('')
+  const validation = useMemo(() => {
+    const next = {}
+    if (name.trim().length < 2) next.name = 'Name must be at least 2 characters.'
+    if (phone.trim() && !PHONE_RE.test(phone.trim())) next.phone = 'Invalid phone format.'
+    return next
+  }, [name, phone])
+
+  const canCreate = !submitting && Object.keys(validation).length === 0
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!canCreate) return
+    setError(null)
+    setSubmitting(true)
+    try {
+      const data = await createHotel({
+        name: name.trim(), addressLine1: addressLine1.trim() || undefined,
+        city: city.trim() || undefined, country: country.trim() || undefined,
+        phone: phone.trim() || undefined,
+      })
+      onCreated?.(data.hotel)
+      setName(''); setAddressLine1(''); setCity(''); setCountry(''); setPhone('')
+      setOpen(false)
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Could not create property'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="shrink-0"><Plus className="h-4 w-4 mr-2" />New Property</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create New Property</DialogTitle>
+          <DialogDescription>Register a new hotel property in the system.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+          <div className="space-y-1.5">
+            <Label htmlFor="ch-name">Hotel Name *</Label>
+            <Input id="ch-name" value={name} onChange={(e) => setName(e.target.value)} required disabled={submitting} aria-invalid={Boolean(validation.name)} />
+            {validation.name && <p className="text-xs text-destructive">{validation.name}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ch-addr">Address Line</Label>
+            <Input id="ch-addr" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} disabled={submitting} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="ch-city">City</Label>
+              <Input id="ch-city" value={city} onChange={(e) => setCity(e.target.value)} disabled={submitting} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ch-country">Country</Label>
+              <Input id="ch-country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={submitting} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ch-phone">Phone</Label>
+            <Input id="ch-phone" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={submitting} aria-invalid={Boolean(validation.phone)} />
+            {validation.phone && <p className="text-xs text-destructive">{validation.phone}</p>}
+          </div>
+          <DialogFooter className="gap-2">
+            <DialogClose asChild><Button type="button" variant="outline" disabled={submitting}>Cancel</Button></DialogClose>
+            <Button type="submit" disabled={!canCreate}>{submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{submitting ? 'Creating…' : 'Create Property'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/* ── Edit Hotel Dialog ── */
+function EditHotelDialog({ hotel, onUpdated }) {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState(hotel.name ?? '')
+  const [city, setCity] = useState(hotel.city ?? '')
+  const [country, setCountry] = useState(hotel.country ?? '')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+
+  function handleOpen(val) {
+    setOpen(val)
+    if (val) {
+      setName(hotel.name ?? '')
+      setCity(hotel.city ?? '')
+      setCountry(hotel.country ?? '')
+      setError(null)
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (name.trim().length < 2) { setError('Name must be at least 2 characters.'); return }
+    setError(null)
+    setSubmitting(true)
+    try {
+      await updateHotel(hotel.id, {
+        name: name.trim(),
+        city: city.trim() || undefined,
+        country: country.trim() || undefined,
+      })
+      onUpdated?.()
+      setOpen(false)
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Could not update property'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Edit hotel"><Pencil className="h-3.5 w-3.5" /></Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Edit Property</DialogTitle>
+          <DialogDescription>Update hotel details.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+          <div className="space-y-1.5">
+            <Label htmlFor="eh-name">Hotel Name</Label>
+            <Input id="eh-name" value={name} onChange={(e) => setName(e.target.value)} required disabled={submitting} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="eh-city">City</Label>
+              <Input id="eh-city" value={city} onChange={(e) => setCity(e.target.value)} disabled={submitting} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eh-country">Country</Label>
+              <Input id="eh-country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={submitting} />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <DialogClose asChild><Button type="button" variant="outline" disabled={submitting}>Cancel</Button></DialogClose>
+            <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{submitting ? 'Saving…' : 'Save Changes'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/* ── Delete Hotel Dialog ── */
+function DeleteHotelDialog({ hotel, onDeleted }) {
+  const [open, setOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function handleDelete() {
+    setError(null)
+    setDeleting(true)
+    try {
+      await deleteHotel(hotel.id)
+      onDeleted?.()
+      setOpen(false)
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Could not delete property'))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" aria-label="Delete hotel"><Trash2 className="h-3.5 w-3.5" /></Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete Property</DialogTitle>
+          <DialogDescription>This will remove the hotel from the system. This cannot be undone.</DialogDescription>
+        </DialogHeader>
+        <div className="rounded-md bg-muted/40 border border-border px-4 py-3 text-sm">
+          <p className="font-medium">{hotel.name}</p>
+          {hotel.city && <p className="text-muted-foreground text-xs mt-0.5">{hotel.city}{hotel.country ? `, ${hotel.country}` : ''}</p>}
+        </div>
+        {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+        <DialogFooter className="gap-2">
+          <DialogClose asChild><Button type="button" variant="outline" disabled={deleting}>Cancel</Button></DialogClose>
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>{deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{deleting ? 'Deleting…' : 'Delete Property'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/* ── Main Page ── */
+export default function AdminHotelsPage() {
+  const [hotels, setHotels] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState(null)
   const [hotelStaff, setHotelStaff] = useState([])
+  const [selectedHotelId, setSelectedHotelId] = useState('')
   const [assignedUsers, setAssignedUsers] = useState([])
   const [assignUserId, setAssignUserId] = useState('')
   const [assignLoading, setAssignLoading] = useState(false)
   const [assignError, setAssignError] = useState(null)
-
-  const createValidation = useMemo(() => {
-    const next = {}
-    if (name.trim().length < 2) next.name = 'Name must be at least 2 characters.'
-    if (addressLine1.trim().length > 500) next.addressLine1 = 'Address cannot exceed 500 characters.'
-    if (city.trim().length > 120) next.city = 'City cannot exceed 120 characters.'
-    if (country.trim().length > 120) next.country = 'Country cannot exceed 120 characters.'
-    if (phone.trim() && !PHONE_RE.test(phone.trim())) {
-      next.phone = 'Use 7-20 digits and separators (+, space, -, ., parentheses).'
-    }
-    return next
-  }, [addressLine1, city, country, name, phone])
 
   const loadHotels = useCallback(async () => {
     setListError(null)
@@ -61,24 +255,19 @@ export default function AdminHotelsPage() {
     }
   }, [])
 
-  useEffect(() => {
-    loadHotels()
-  }, [loadHotels])
+  useEffect(() => { loadHotels() }, [loadHotels])
 
   const loadStaffPool = useCallback(async () => {
-    const data = await listUsers({ role: 'hotel' })
-    setHotelStaff(data.users ?? [])
+    try {
+      const data = await listUsers({ role: 'hotel' })
+      setHotelStaff(data.users ?? [])
+    } catch { setHotelStaff([]) }
   }, [])
 
-  useEffect(() => {
-    loadStaffPool().catch(() => setHotelStaff([]))
-  }, [loadStaffPool])
+  useEffect(() => { loadStaffPool() }, [loadStaffPool])
 
   const loadAssigned = useCallback(async (hotelId) => {
-    if (!hotelId) {
-      setAssignedUsers([])
-      return
-    }
+    if (!hotelId) { setAssignedUsers([]); return }
     setAssignLoading(true)
     setAssignError(null)
     try {
@@ -87,9 +276,7 @@ export default function AdminHotelsPage() {
     } catch (err) {
       setAssignError(getApiErrorMessage(err, 'Could not load assignments'))
       setAssignedUsers([])
-    } finally {
-      setAssignLoading(false)
-    }
+    } finally { setAssignLoading(false) }
   }, [])
 
   useEffect(() => {
@@ -98,58 +285,16 @@ export default function AdminHotelsPage() {
   }, [selectedHotelId, loadAssigned])
 
   useEffect(() => {
-    if (hotels.length && !selectedHotelId) {
-      setSelectedHotelId(hotels[0].id)
-    }
+    if (hotels.length && !selectedHotelId) setSelectedHotelId(hotels[0].id)
   }, [hotels, selectedHotelId])
 
   const assignedIds = useMemo(() => new Set(assignedUsers.map((u) => u.id)), [assignedUsers])
-
-  const unassignedStaff = useMemo(
-    () => hotelStaff.filter((u) => !assignedIds.has(u.id)),
-    [hotelStaff, assignedIds],
-  )
-  const canCreate = !createSubmitting && Object.keys(createValidation).length === 0
-
-  async function handleCreate(e) {
-    e.preventDefault()
-    setCreateError(null)
-    setCreateSuccess(null)
-    if (!canCreate) {
-      setCreateError('Please correct the highlighted fields before creating a property.')
-      return
-    }
-    setCreateSubmitting(true)
-    try {
-      const data = await createHotel({
-        name: name.trim(),
-        addressLine1: addressLine1.trim() || undefined,
-        city: city.trim() || undefined,
-        country: country.trim() || undefined,
-        phone: phone.trim() || undefined,
-      })
-      setCreateSuccess(`Created “${data.hotel?.name ?? name}”.`)
-      setName('')
-      setAddressLine1('')
-      setCity('')
-      setCountry('')
-      setPhone('')
-      await loadHotels()
-      if (data.hotel?.id) setSelectedHotelId(data.hotel.id)
-    } catch (err) {
-      setCreateError(getApiErrorMessage(err, 'Could not create property'))
-    } finally {
-      setCreateSubmitting(false)
-    }
-  }
+  const unassignedStaff = useMemo(() => hotelStaff.filter((u) => !assignedIds.has(u.id)), [hotelStaff, assignedIds])
 
   async function handleAssign(e) {
     e.preventDefault()
     setAssignError(null)
-    if (!selectedHotelId || !assignUserId) {
-      setAssignError('Select a property and a user.')
-      return
-    }
+    if (!selectedHotelId || !assignUserId) { setAssignError('Select a property and a user.'); return }
     setAssignLoading(true)
     try {
       await assignUserToHotel(selectedHotelId, assignUserId)
@@ -158,255 +303,149 @@ export default function AdminHotelsPage() {
       await loadStaffPool()
     } catch (err) {
       setAssignError(getApiErrorMessage(err, 'Assignment failed'))
-    } finally {
-      setAssignLoading(false)
-    }
+    } finally { setAssignLoading(false) }
   }
 
   return (
-    <div className="admin-page hotel-page">
-      <div className="page__card" style={{ marginBottom: '1rem' }}>
-        <h2 className="page__title">Hotel management</h2>
-        <p className="page__text">
-          Register properties and link hotel staff accounts so they can operate in the correct scope.
-        </p>
-      </div>
-
-      <div className="admin-page__grid admin-page__grid--split">
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          {listError ? (
-            <div className="hotel-page-msg hotel-page-msg--error" role="alert">
-              {listError}
-              <button type="button" className="admin-retry-btn" onClick={loadHotels}>
-                Retry
-              </button>
-            </div>
-          ) : null}
-          <p className="admin-table-meta">
-            {loading
-              ? 'Loading properties…'
-              : `${hotels.length} propert${hotels.length === 1 ? 'y' : 'ies'} registered`}
-          </p>
-
-          <div className="hotel-table-wrap">
-            <table className="hotel-table hotel-table--responsive">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>City</th>
-                  <th>Country</th>
-                  <th>ID</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={4} className="hotel-table__empty">
-                      <span className="hotel-page-hint--inline">
-                        <InlineSpinner size="sm" label="Loading hotels" />
-                        Loading properties…
-                      </span>
-                    </td>
-                  </tr>
-                ) : hotels.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="hotel-table__empty">
-                      No properties yet. Create one using the form.
-                    </td>
-                  </tr>
-                ) : (
-                  hotels.map((h) => (
-                    <tr key={h.id}>
-                      <td data-label="Name">{h.name}</td>
-                      <td data-label="City">{h.city ?? '—'}</td>
-                      <td data-label="Country">{h.country ?? '—'}</td>
-                      <td data-label="ID">
-                        <span className="hotel-code" title={h.id}>
-                          {h.id.slice(0, 8)}…
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <h2 className="text-xl font-semibold">Hotel Management</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Register, edit, and delete hotel properties</p>
         </div>
+        <CreateHotelDialog onCreated={(h) => { loadHotels(); if (h?.id) setSelectedHotelId(h.id) }} />
+      </div>
 
-        <div className="admin-page__card">
-          <h3>New property</h3>
-          <form className="admin-form" onSubmit={handleCreate}>
-            {createError ? (
-              <div className="hotel-page-msg hotel-page-msg--error" role="alert">
-                {createError}
-              </div>
-            ) : null}
-            {createSuccess ? (
-              <div className="hotel-page-msg" role="status">
-                {createSuccess}
-              </div>
-            ) : null}
+      {listError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {listError}
+            <Button variant="link" size="sm" className="ml-2 h-auto p-0" onClick={loadHotels}>Retry</Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
-            <label className="admin-form__field">
-              <span>Name</span>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                disabled={createSubmitting}
-                autoComplete="organization"
-                aria-invalid={Boolean(createValidation.name)}
-              />
-              {createValidation.name ? <p className="admin-form__error">{createValidation.name}</p> : null}
-            </label>
-            <label className="admin-form__field">
-              <span>Address line</span>
-              <input
-                value={addressLine1}
-                onChange={(e) => setAddressLine1(e.target.value)}
-                disabled={createSubmitting}
-                autoComplete="street-address"
-                aria-invalid={Boolean(createValidation.addressLine1)}
-              />
-              {createValidation.addressLine1 ? (
-                <p className="admin-form__error">{createValidation.addressLine1}</p>
-              ) : null}
-            </label>
-            <div className="admin-form__row">
-              <label className="admin-form__field">
-                <span>City</span>
-                <input
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  disabled={createSubmitting}
-                  autoComplete="address-level2"
-                  aria-invalid={Boolean(createValidation.city)}
-                />
-                {createValidation.city ? <p className="admin-form__error">{createValidation.city}</p> : null}
-              </label>
-              <label className="admin-form__field">
-                <span>Country</span>
-                <input
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  disabled={createSubmitting}
-                  autoComplete="country-name"
-                  aria-invalid={Boolean(createValidation.country)}
-                />
-                {createValidation.country ? (
-                  <p className="admin-form__error">{createValidation.country}</p>
-                ) : null}
-              </label>
+      {/* Hotels table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {loading ? 'Loading…' : `${hotels.length} propert${hotels.length === 1 ? 'y' : 'ies'} registered`}
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>City</TableHead>
+              <TableHead>Country</TableHead>
+              <TableHead>ID</TableHead>
+              <TableHead className="w-[90px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <TableRow key={i}>{[1,2,3,4,5].map((j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}</TableRow>
+              ))
+            ) : hotels.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  No properties yet. Click "New Property" to add one.
+                </TableCell>
+              </TableRow>
+            ) : (
+              hotels.map((h) => (
+                <TableRow key={h.id} className={h.id === selectedHotelId ? 'bg-muted/40' : ''}>
+                  <TableCell className="font-medium">{h.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{h.city ?? '—'}</TableCell>
+                  <TableCell className="text-muted-foreground">{h.country ?? '—'}</TableCell>
+                  <TableCell>
+                    <code className="text-xs bg-muted rounded px-1.5 py-0.5 text-muted-foreground" title={h.id}>
+                      {h.id.slice(0, 8)}…
+                    </code>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-0.5">
+                      <EditHotelDialog hotel={h} onUpdated={loadHotels} />
+                      <DeleteHotelDialog hotel={h} onDeleted={() => { loadHotels(); if (selectedHotelId === h.id) setSelectedHotelId('') }} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      <Separator />
+
+      {/* Staff assignment */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm">Assign Staff</CardTitle>
+          </div>
+          <div className="text-sm text-muted-foreground leading-relaxed">
+            Only accounts with the{' '}
+            <Badge variant="secondary" className="text-xs align-middle">hotel</Badge>{' '}
+            role can be assigned.
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {assignError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{assignError}</AlertDescription></Alert>}
+          <div className="space-y-1.5">
+            <Label htmlFor="assign-property">Property</Label>
+            <Select value={selectedHotelId} onValueChange={setSelectedHotelId} disabled={!hotels.length || assignLoading}>
+              <SelectTrigger id="assign-property" className="max-w-xs">
+                <SelectValue placeholder="Select property…" />
+              </SelectTrigger>
+              <SelectContent>
+                {hotels.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>{h.name}{h.city ? ` — ${h.city}` : ''}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Currently Assigned</Label>
+            {assignLoading && selectedHotelId ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Loading…</div>
+            ) : assignedUsers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No staff assigned to this property yet.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {assignedUsers.map((u) => (
+                  <Badge key={u.id} variant="secondary" className="gap-1 font-normal">
+                    {u.fullName}<span className="text-muted-foreground">({u.email})</span>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <form onSubmit={handleAssign} className="flex items-end gap-3 pt-2">
+            <div className="space-y-1.5 flex-1 max-w-xs">
+              <Label htmlFor="assign-user">Add Hotel User</Label>
+              <Select value={assignUserId} onValueChange={setAssignUserId} disabled={!selectedHotelId || !unassignedStaff.length || assignLoading}>
+                <SelectTrigger id="assign-user">
+                  <SelectValue placeholder={!unassignedStaff.length ? 'No unassigned hotel users' : 'Select user…'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {unassignedStaff.map((u) => <SelectItem key={u.id} value={u.id}>{u.fullName} — {u.email}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <label className="admin-form__field">
-              <span>Phone</span>
-              <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={createSubmitting}
-                autoComplete="tel"
-                aria-invalid={Boolean(createValidation.phone)}
-              />
-              {createValidation.phone ? <p className="admin-form__error">{createValidation.phone}</p> : null}
-            </label>
-            <button type="submit" className="admin-form__submit" disabled={!canCreate}>
-              <span className="admin-form__submit-content">
-                {createSubmitting ? <InlineSpinner size="sm" label="Creating hotel" /> : null}
-                {createSubmitting ? 'Creating…' : 'Create property'}
-              </span>
-            </button>
+            <Button type="submit" disabled={!assignUserId || assignLoading || !selectedHotelId}>
+              {assignLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {assignLoading ? 'Saving…' : 'Assign'}
+            </Button>
           </form>
-        </div>
-      </div>
-
-      <div className="admin-page__card admin-page__card--spaced">
-        <h3>Assign staff</h3>
-        <p className="admin-hint">
-          Only accounts with the <strong>hotel</strong> role can be assigned. Create or promote users
-          under User management.
-        </p>
-
-        <div className="admin-select-hotel">
-          <label>
-            <span>Property</span>
-            <select
-              value={selectedHotelId}
-              onChange={(e) => setSelectedHotelId(e.target.value)}
-              disabled={!hotels.length || assignLoading}
-            >
-              {hotels.length === 0 ? (
-                <option value="">No properties</option>
-              ) : (
-                hotels.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name}
-                    {h.city ? ` — ${h.city}` : ''}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-        </div>
-
-        {assignError ? (
-          <div className="hotel-page-msg hotel-page-msg--error" role="alert">
-            {assignError}
-          </div>
-        ) : null}
-
-        <label className="admin-form__field">
-          <span>Currently assigned</span>
-          {assignLoading && selectedHotelId ? (
-            <p className="admin-hint hotel-page-hint--inline">
-              <InlineSpinner size="sm" label="Loading assignments" />
-              Loading…
-            </p>
-          ) : assignedUsers.length === 0 ? (
-            <p className="admin-hint">No staff assigned to this property yet.</p>
-          ) : (
-            <ul className="page__list" style={{ marginTop: '0.35rem' }}>
-              {assignedUsers.map((u) => (
-                <li key={u.id}>
-                  {u.fullName}{' '}
-                  <span style={{ color: 'var(--text-dim)' }}>({u.email})</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </label>
-
-        <form className="admin-form" onSubmit={handleAssign} style={{ marginTop: '1rem' }}>
-          <label className="admin-form__field">
-            <span>Add hotel user</span>
-            <select
-              value={assignUserId}
-              onChange={(e) => setAssignUserId(e.target.value)}
-              disabled={!selectedHotelId || !unassignedStaff.length || assignLoading}
-            >
-              <option value="">
-                {!unassignedStaff.length
-                  ? 'No unassigned hotel users'
-                  : 'Select user…'}
-              </option>
-              {unassignedStaff.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.fullName} — {u.email}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="submit"
-            className="admin-form__submit"
-            disabled={!assignUserId || assignLoading || !selectedHotelId}
-          >
-            <span className="admin-form__submit-content">
-              {assignLoading ? <InlineSpinner size="sm" label="Assigning user" /> : null}
-              {assignLoading ? 'Saving…' : 'Assign to property'}
-            </span>
-          </button>
-        </form>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

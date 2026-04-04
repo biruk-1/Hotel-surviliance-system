@@ -1,9 +1,18 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { Search, AlertCircle } from 'lucide-react'
 import { useHotelScope } from '../../hooks/useHotelScope'
 import { getGuestById, listGuests } from '../../services/guestService'
 import { getApiErrorMessage } from '../../utils/apiError'
 import { formatDateTime, pickStayForHotel } from '../../utils/hotel'
-import './hotel-pages.css'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const PAGE_SIZE = 10
 
@@ -16,9 +25,7 @@ export default function GuestListPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useLayoutEffect(() => {
-    setPage(1)
-  }, [selectedHotelId])
+  useLayoutEffect(() => { setPage(1) }, [selectedHotelId])
 
   useEffect(() => {
     if (scopeLoading || scopeError || hotels.length === 0 || !selectedHotelId) {
@@ -30,11 +37,7 @@ export default function GuestListPage() {
       setError(null)
       setLoading(true)
       try {
-        const { data, pagination: pag } = await listGuests({
-          hotelId: selectedHotelId,
-          page,
-          limit: PAGE_SIZE,
-        })
+        const { data, pagination: pag } = await listGuests({ hotelId: selectedHotelId, page, limit: PAGE_SIZE })
         const guests = data?.guests ?? []
         const enriched = await Promise.all(
           guests.map(async (g) => {
@@ -60,9 +63,7 @@ export default function GuestListPage() {
       }
     }
     load()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [scopeLoading, scopeError, hotels.length, selectedHotelId, page])
 
   const filteredRows = useMemo(() => {
@@ -77,112 +78,129 @@ export default function GuestListPage() {
   }, [rows, search])
 
   if (scopeLoading) {
-    return <p className="hotel-page-hint">Loading properties…</p>
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (scopeError) {
     return (
-      <div className="hotel-page-msg hotel-page-msg--error" role="alert">
-        {getApiErrorMessage(scopeError, 'Could not load properties')}
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>{getApiErrorMessage(scopeError, 'Could not load properties')}</AlertDescription>
+      </Alert>
     )
   }
 
   if (hotels.length === 0) {
     return (
-      <p className="hotel-page-msg" role="status">
-        No property is assigned to your account. Contact an administrator.
-      </p>
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>No property is assigned to your account. Contact an administrator.</AlertDescription>
+      </Alert>
     )
   }
 
   return (
-    <div className="hotel-page">
-      <div className="hotel-toolbar">
-        <label className="hotel-toolbar__search">
-          <span className="hotel-toolbar__search-label">Search</span>
-          <input
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold">Guest List</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">All registered guests for the selected property</p>
+      </div>
+
+      {/* Search toolbar */}
+      <div className="flex items-center gap-2 max-w-sm">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Name, ID number, or guest UUID…"
-            className="hotel-toolbar__input"
+            placeholder="Search by name or ID…"
+            className="pl-9"
           />
-        </label>
-        <p className="hotel-toolbar__hint">Filters the current page of results.</p>
+        </div>
       </div>
 
-      {loading ? (
-        <p className="hotel-page-hint" role="status">
-          Loading guests…
-        </p>
-      ) : null}
-      {error ? (
-        <div className="hotel-page-msg hotel-page-msg--error" role="alert">
-          {getApiErrorMessage(error, 'Could not load guests')}
-        </div>
-      ) : null}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{getApiErrorMessage(error, 'Could not load guests')}</AlertDescription>
+        </Alert>
+      )}
 
-      {!loading && !error ? (
-        <>
-          <div className="hotel-table-wrap">
-            <table className="hotel-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>ID number</th>
-                  <th>Room</th>
-                  <th>Check-in</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="hotel-table__empty">
-                      No guests match this view.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredRows.map((r) => (
-                    <tr key={r.id}>
-                      <td>{r.name}</td>
-                      <td>
-                        <code className="hotel-code">{r.idNumber}</code>
-                      </td>
-                      <td>{r.room}</td>
-                      <td>{formatDateTime(r.checkIn)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>ID Number</TableHead>
+              <TableHead>Room</TableHead>
+              <TableHead>Check-in</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              [1, 2, 3, 4, 5].map((i) => (
+                <TableRow key={i}>
+                  {[1, 2, 3, 4].map((j) => (
+                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : filteredRows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  No guests match this view.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredRows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell>
+                    <code className="text-xs bg-muted rounded px-1.5 py-0.5">{r.idNumber}</code>
+                  </TableCell>
+                  <TableCell>{r.room}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{formatDateTime(r.checkIn)}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {pagination && search.trim() === '' && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!pagination.hasPrev}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!pagination.hasNext}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
           </div>
-
-          {pagination && search.trim() === '' ? (
-            <nav className="hotel-pagination" aria-label="Pagination">
-              <button
-                type="button"
-                className="hotel-pagination__btn"
-                disabled={!pagination.hasPrev}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </button>
-              <span className="hotel-pagination__meta">
-                Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
-              </span>
-              <button
-                type="button"
-                className="hotel-pagination__btn"
-                disabled={!pagination.hasNext}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </button>
-            </nav>
-          ) : null}
-        </>
-      ) : null}
+        </div>
+      )}
     </div>
   )
 }

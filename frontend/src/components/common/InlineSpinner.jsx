@@ -1,12 +1,13 @@
-import './inline-spinner.css'
+import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-/**
- * @param {{ size?: 'sm' | 'md'; label?: string }} props
- */
 export default function InlineSpinner({ size = 'md', label = 'Loading' }) {
+  const sizeClass = size === 'sm' ? 'h-3.5 w-3.5' : 'h-5 w-5'
   return (
-    <span className={`inline-spinner inline-spinner--${size}`} role="status" aria-label={label}>
-      <span className="inline-spinner__dot" />
-    </span>
+    <Loader2
+      className={cn('animate-spin text-muted-foreground', sizeClass)}
+      role="status"
+      aria-label={label}
+    />
   )
 }

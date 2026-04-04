@@ -7,7 +7,13 @@ const validateRequest = require('../../middlewares/validate.middleware');
 const alertsController = require('../alerts/alerts.controller');
 const blacklistHotelRoutes = require('../blacklist/blacklist.hotel.routes');
 const hotelsController = require('./hotels.controller');
-const { createHotelRules, assignUserRules, listHotelUsersRules } = require('./hotels.validation');
+const {
+  createHotelRules,
+  updateHotelRules,
+  deleteHotelRules,
+  assignUserRules,
+  listHotelUsersRules,
+} = require('./hotels.validation');
 const { asyncHandler } = require('../../utils/asyncHandler');
 
 const router = express.Router();
@@ -21,6 +27,24 @@ router.post(
   createHotelRules,
   validateRequest,
   asyncHandler(hotelsController.createHotel)
+);
+
+router.patch(
+  '/:hotelId',
+  authenticate,
+  authorizeRoles('admin'),
+  updateHotelRules,
+  validateRequest,
+  asyncHandler(hotelsController.updateHotel)
+);
+
+router.delete(
+  '/:hotelId',
+  authenticate,
+  authorizeRoles('admin'),
+  deleteHotelRules,
+  validateRequest,
+  asyncHandler(hotelsController.deleteHotel)
 );
 
 router.get(

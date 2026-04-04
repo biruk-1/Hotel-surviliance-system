@@ -25,6 +25,20 @@ async function getDashboardStats(req, res, next) {
   }
 }
 
+async function listHotelsForLookup(req, res, next) {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, name, city, country
+       FROM hotels
+       ORDER BY name ASC`
+    );
+    res.json({ success: true, data: { hotels: rows } });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboardStats,
+  listHotelsForLookup,
 };

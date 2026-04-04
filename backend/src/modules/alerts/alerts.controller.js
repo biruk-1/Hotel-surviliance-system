@@ -6,6 +6,32 @@ const { paginationMeta } = require('../../middlewares/pagination.middleware');
 const ALERT_FIELDS = `id, hotel_id, stay_id, guest_id, severity, title, message,
                       acknowledged_at, resolved_at, created_at, updated_at`;
 
+/** Base alert row + hotel name + guest name + stay location (for police / lists). */
+const ALERT_LIST_SELECT = `a.id, a.hotel_id, a.stay_id, a.guest_id, a.severity, a.title, a.message,
+  a.acknowledged_at, a.resolved_at, a.created_at, a.updated_at,
+  h.name AS hotel_name,
+  g.full_name AS guest_full_name,
+  s.room_number AS stay_room_number,
+  s.check_in AS stay_check_in`;
+
+const ALERT_LIST_JOINS = `
+FROM alerts a
+INNER JOIN hotels h ON h.id = a.hotel_id
+LEFT JOIN guests g ON g.id = a.guest_id
+LEFT JOIN stays s ON s.id = a.stay_id
+`;
+
+async function selectAlertEnrichedById(alertId) {
+  const { rows } = await db.query(
+    `SELECT ${ALERT_LIST_SELECT}
+     ${ALERT_LIST_JOINS}
+     WHERE a.id = $1
+     LIMIT 1`,
+    [alertId]
+  );
+  return rows[0] || null;
+}
+
 async function assertAlertAccess(req, alertId) {
   const { rows } = await db.query(`SELECT hotel_id FROM alerts WHERE id = $1 LIMIT 1`, [alertId]);
   if (!rows.length) throw new HttpError(404, 'Alert not found');
@@ -29,7 +55,10 @@ async function listAllAlerts(req, res, next) {
     if (role === 'police' || role === 'admin') {
       const [dataRes, countRes] = await Promise.all([
         db.query(
-          `SELECT ${ALERT_FIELDS} FROM alerts ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+          `SELECT ${ALERT_LIST_SELECT}
+           ${ALERT_LIST_JOINS}
+           ORDER BY a.created_at DESC
+           LIMIT $1 OFFSET $2`,
           [limit, offset]
         ),
         db.query(`SELECT COUNT(*) AS total FROM alerts`),
@@ -54,8 +83,8 @@ async function listAllAlerts(req, res, next) {
 
       const [dataRes, countRes] = await Promise.all([
         db.query(
-          `SELECT ${ALERT_FIELDS}
-           FROM alerts a
+          `SELECT ${ALERT_LIST_SELECT}
+           ${ALERT_LIST_JOINS}
            WHERE a.hotel_id = ANY($1::uuid[])
            ORDER BY a.created_at DESC
            LIMIT $2 OFFSET $3`,
@@ -96,10 +125,10 @@ async function listAlertsForHotel(req, res, next) {
 
     const [dataRes, countRes] = await Promise.all([
       db.query(
-        `SELECT ${ALERT_FIELDS}
-         FROM alerts
-         WHERE hotel_id = $1
-         ORDER BY created_at DESC
+        `SELECT ${ALERT_LIST_SELECT}
+         ${ALERT_LIST_JOINS}
+         WHERE a.hotel_id = $1
+         ORDER BY a.created_at DESC
          LIMIT $2 OFFSET $3`,
         [hotelId, limit, offset]
       ),
@@ -121,16 +150,21 @@ async function markAlertReviewed(req, res, next) {
   try {
     await assertAlertAccess(req, req.params.id);
 
-    const { rows } = await db.query(
+    await db.query(
       `UPDATE alerts
        SET acknowledged_at = COALESCE(acknowledged_at, NOW()),
            updated_at = NOW()
-       WHERE id = $1
-       RETURNING ${ALERT_FIELDS}`,
+       WHERE id = $1`,
       [req.params.id]
     );
 
-    res.json({ success: true, data: { alert: rows[0], reviewed: true } });
+    const alert = await selectAlertEnrichedById(req.params.id);
+    if (!alert) {
+      next(new HttpError(404, 'Alert not found'));
+      return;
+    }
+
+    res.json({ success: true, data: { alert, reviewed: true } });
   } catch (err) {
     next(err);
   }

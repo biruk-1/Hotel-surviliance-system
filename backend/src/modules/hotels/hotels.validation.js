@@ -49,6 +49,47 @@ const createHotelRules = [
     .custom(noControlChars),
 ];
 
+const updateHotelRules = [
+  ...hotelIdParam,
+
+  body('name')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('name must be 2–255 characters')
+    .custom(noControlChars),
+
+  body('addressLine1')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('addressLine1 is too long')
+    .custom(noControlChars),
+
+  body('city')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage('city is too long')
+    .custom(noControlChars),
+
+  body('country')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage('country is too long')
+    .custom(noControlChars),
+
+  body('phone')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('phone is too long')
+    .custom(noControlChars),
+];
+
+const deleteHotelRules = [...hotelIdParam];
+
 const assignUserRules = [
   ...hotelIdParam,
   body('userId').isUUID().withMessage('userId must be a valid UUID'),
@@ -58,6 +99,8 @@ const listHotelUsersRules = [...hotelIdParam];
 
 module.exports = {
   createHotelRules,
+  updateHotelRules,
+  deleteHotelRules,
   assignUserRules,
   listHotelUsersRules,
 };

@@ -1,14 +1,30 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 import RealtimeAlertToast from '../../components/alerts/RealtimeAlertToast'
-import InlineSpinner from '../../components/common/InlineSpinner'
 import { useNewAlertSocket } from '../../hooks/useNewAlertSocket'
 import { useHotelScope } from '../../hooks/useHotelScope'
 import { listAlertsForHotel, markAlertReviewed } from '../../services/alertService'
 import { getApiErrorMessage } from '../../utils/apiError'
 import { formatDateTime } from '../../utils/hotel'
-import './hotel-pages.css'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card } from '@/components/ui/card'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
 
 const PAGE_SIZE = 15
+
+function SeverityBadge({ severity }) {
+  const s = (severity ?? '').toLowerCase()
+  if (s === 'critical') return <Badge variant="destructive">Critical</Badge>
+  if (s === 'high') return <Badge className="bg-red-50 text-red-700 border-red-200">High</Badge>
+  if (s === 'medium') return <Badge variant="warning">Medium</Badge>
+  if (s === 'low') return <Badge variant="secondary">Low</Badge>
+  return <Badge variant="outline">{severity ?? '—'}</Badge>
+}
 
 export default function HotelAlertsPage() {
   const { loading: scopeLoading, error: scopeError, hotels, selectedHotelId } = useHotelScope()
@@ -25,9 +41,7 @@ export default function HotelAlertsPage() {
   const [actionError, setActionError] = useState(null)
   const [toast, setToast] = useState(null)
 
-  useLayoutEffect(() => {
-    setPage(1)
-  }, [selectedHotelId])
+  useLayoutEffect(() => { setPage(1) }, [selectedHotelId])
 
   useEffect(() => {
     if (scopeLoading || scopeError || hotels.length === 0 || !selectedHotelId) {
@@ -39,10 +53,7 @@ export default function HotelAlertsPage() {
       setError(null)
       setLoading(true)
       try {
-        const { data, pagination: pag } = await listAlertsForHotel(selectedHotelId, {
-          page,
-          limit: PAGE_SIZE,
-        })
+        const { data, pagination: pag } = await listAlertsForHotel(selectedHotelId, { page, limit: PAGE_SIZE })
         if (cancelled) return
         setAlerts(data?.alerts ?? [])
         setPagination(pag ?? null)
@@ -53,14 +64,10 @@ export default function HotelAlertsPage() {
       }
     }
     load()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [scopeLoading, scopeError, hotels.length, selectedHotelId, page, listVersion])
 
-  const refreshList = useCallback(() => {
-    setListVersion((v) => v + 1)
-  }, [])
+  const refreshList = useCallback(() => setListVersion((v) => v + 1), [])
 
   useNewAlertSocket({
     enabled: Boolean(!scopeLoading && !scopeError && hotels.length > 0 && selectedHotelId),
@@ -85,9 +92,7 @@ export default function HotelAlertsPage() {
     try {
       const payload = await markAlertReviewed(alertId)
       const next = payload?.alert
-      if (next) {
-        setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, ...next } : a)))
-      }
+      if (next) setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, ...next } : a)))
     } catch (e) {
       setActionError(getApiErrorMessage(e, 'Could not update alert'))
     } finally {
@@ -95,145 +100,137 @@ export default function HotelAlertsPage() {
     }
   }
 
-  if (scopeLoading) {
+  if (scopeLoading || (hotels.length === 0 && !scopeLoading && !scopeError)) {
     return (
-      <div className="hotel-page">
+      <>
         <RealtimeAlertToast toast={toast} onDismiss={dismissToast} />
-        <p className="hotel-page-hint hotel-page-hint--inline">
-          <InlineSpinner size="sm" label="Loading properties" />
-          Loading properties…
-        </p>
-      </div>
+        {hotels.length === 0 && !scopeLoading ? (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>No property is assigned to your account.</AlertDescription>
+          </Alert>
+        ) : (
+          <Card><div className="p-6 space-y-3">{[1,2,3].map(i=><Skeleton key={i} className="h-10 w-full"/>)}</div></Card>
+        )}
+      </>
     )
   }
 
   if (scopeError) {
     return (
-      <div className="hotel-page">
+      <>
         <RealtimeAlertToast toast={toast} onDismiss={dismissToast} />
-        <div className="hotel-page-msg hotel-page-msg--error" role="alert">
-          {getApiErrorMessage(scopeError, 'Could not load properties')}
-        </div>
-      </div>
-    )
-  }
-
-  if (hotels.length === 0) {
-    return (
-      <div className="hotel-page">
-        <RealtimeAlertToast toast={toast} onDismiss={dismissToast} />
-        <p className="hotel-page-msg" role="status">
-          No property is assigned to your account. Contact an administrator.
-        </p>
-      </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{getApiErrorMessage(scopeError, 'Could not load properties')}</AlertDescription>
+        </Alert>
+      </>
     )
   }
 
   return (
-    <div className="hotel-page">
+    <div className="space-y-4">
       <RealtimeAlertToast toast={toast} onDismiss={dismissToast} />
-      <p className="hotel-page-lede">Alerts for the selected property only.</p>
 
-      {actionError ? (
-        <div className="hotel-page-msg hotel-page-msg--error" role="alert">
-          {actionError}
-        </div>
-      ) : null}
+      <div>
+        <h2 className="text-xl font-semibold">Alerts</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">Alerts for the selected property only</p>
+      </div>
 
-      {loading ? (
-        <p className="hotel-page-hint hotel-page-hint--inline" role="status">
-          <InlineSpinner size="sm" label="Loading alerts" />
-          Loading alerts…
-        </p>
-      ) : null}
-      {error ? (
-        <div className="hotel-page-msg hotel-page-msg--error" role="alert">
-          {getApiErrorMessage(error, 'Could not load alerts')}
-          <button type="button" className="hotel-retry-btn" onClick={refreshList}>
-            Retry
-          </button>
-        </div>
-      ) : null}
+      {actionError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      )}
 
-      {!loading && !error ? (
-        <>
-          <div className="hotel-table-wrap">
-            <table className="hotel-table hotel-table--responsive">
-              <thead>
-                <tr>
-                  <th>Severity</th>
-                  <th>Title</th>
-                  <th>Message</th>
-                  <th>Created</th>
-                  <th>Status</th>
-                  <th aria-label="Actions" />
-                </tr>
-              </thead>
-              <tbody>
-                {alerts.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="hotel-table__empty">
-                      No alerts for this property.
-                    </td>
-                  </tr>
-                ) : (
-                  alerts.map((a) => {
-                    const reviewed = Boolean(a.acknowledged_at)
-                    return (
-                      <tr key={a.id}>
-                        <td data-label="Severity">{a.severity ?? '—'}</td>
-                        <td data-label="Title">{a.title ?? '—'}</td>
-                        <td data-label="Message" className="hotel-table__clamp">
-                          {a.message ?? '—'}
-                        </td>
-                        <td data-label="Created">{formatDateTime(a.created_at)}</td>
-                        <td data-label="Status">{reviewed ? 'Reviewed' : 'Pending'}</td>
-                        <td data-label="Actions">
-                          <button
-                            type="button"
-                            className="hotel-table__action"
-                            disabled={reviewed || actionId === a.id}
-                            onClick={() => handleReview(a.id)}
-                          >
-                            <span className="hotel-table__action-content">
-                              {actionId === a.id ? <InlineSpinner size="sm" label="Saving alert" /> : null}
-                              {actionId === a.id ? 'Saving' : reviewed ? 'Done' : 'Mark reviewed'}
-                            </span>
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {getApiErrorMessage(error, 'Could not load alerts')}
+            <Button variant="link" size="sm" className="ml-2 h-auto p-0" onClick={refreshList}>
+              <RefreshCw className="h-3 w-3 mr-1" /> Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Severity</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Message</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-[120px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <TableRow key={i}>
+                  {[1,2,3,4,5,6].map((j) => (
+                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : alerts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  No alerts for this property.
+                </TableCell>
+              </TableRow>
+            ) : (
+              alerts.map((a) => {
+                const reviewed = Boolean(a.acknowledged_at)
+                return (
+                  <TableRow key={a.id}>
+                    <TableCell><SeverityBadge severity={a.severity} /></TableCell>
+                    <TableCell className="font-medium">{a.title ?? '—'}</TableCell>
+                    <TableCell className="max-w-xs truncate text-muted-foreground text-sm">
+                      {a.message ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                      {formatDateTime(a.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      {reviewed ? (
+                        <Badge variant="secondary">Reviewed</Badge>
+                      ) : (
+                        <Badge variant="warning">Pending</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={reviewed || actionId === a.id}
+                        onClick={() => handleReview(a.id)}
+                      >
+                        {actionId === a.id && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                        {actionId === a.id ? 'Saving…' : reviewed ? 'Done' : 'Mark reviewed'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {pagination && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>Page {pagination.page} of {pagination.totalPages}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={!pagination.hasPrev} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</Button>
+            <Button variant="outline" size="sm" disabled={!pagination.hasNext} onClick={() => setPage((p) => p + 1)}>Next</Button>
           </div>
-
-          {pagination ? (
-            <nav className="hotel-pagination" aria-label="Pagination">
-              <button
-                type="button"
-                className="hotel-pagination__btn"
-                disabled={!pagination.hasPrev}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </button>
-              <span className="hotel-pagination__meta">
-                Page {pagination.page} of {pagination.totalPages}
-              </span>
-              <button
-                type="button"
-                className="hotel-pagination__btn"
-                disabled={!pagination.hasNext}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </button>
-            </nav>
-          ) : null}
-        </>
-      ) : null}
+        </div>
+      )}
     </div>
   )
 }

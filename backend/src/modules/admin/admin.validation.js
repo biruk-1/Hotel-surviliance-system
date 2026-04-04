@@ -1,4 +1,4 @@
-const { body, query } = require('express-validator');
+const { body, param, query } = require('express-validator');
 
 const ROLES = ['hotel', 'police', 'admin'];
 
@@ -10,6 +10,10 @@ function noControlChars(value) {
   }
   return true;
 }
+
+const userIdParam = [
+  param('id').isUUID().withMessage('id must be a valid UUID'),
+];
 
 const createUserRules = [
   body('email')
@@ -58,7 +62,45 @@ const listUsersRules = [
     .withMessage(`role must be one of: ${ROLES.join(', ')}`),
 ];
 
+const updateUserRules = [
+  ...userIdParam,
+
+  body('fullName')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Full name must be 2–255 characters')
+    .custom(noControlChars),
+
+  body('role')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isIn(ROLES)
+    .withMessage(`Role must be one of: ${ROLES.join(', ')}`),
+];
+
+const updatePasswordRules = [
+  ...userIdParam,
+
+  body('password')
+    .isString()
+    .withMessage('Password must be a string')
+    .isLength({ min: 8, max: 128 })
+    .withMessage('Password must be between 8 and 128 characters')
+    .matches(/[A-Z]/)
+    .withMessage('Password must contain at least one uppercase letter')
+    .matches(/[a-z]/)
+    .withMessage('Password must contain at least one lowercase letter')
+    .matches(/[0-9]/)
+    .withMessage('Password must contain at least one digit'),
+];
+
+const deleteUserRules = [...userIdParam];
+
 module.exports = {
   createUserRules,
   listUsersRules,
+  updateUserRules,
+  updatePasswordRules,
+  deleteUserRules,
 };

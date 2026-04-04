@@ -27,6 +27,22 @@ export async function createHotel(payload) {
 
 /**
  * @param {string} hotelId
+ * @param {{ name?: string; addressLine1?: string; city?: string; country?: string; phone?: string }} payload
+ */
+export async function updateHotel(hotelId, payload) {
+  const res = await api.patch(`/hotels/${hotelId}`, payload)
+  return unwrapData(res)
+}
+
+/**
+ * @param {string} hotelId
+ */
+export async function deleteHotel(hotelId) {
+  await api.delete(`/hotels/${hotelId}`)
+}
+
+/**
+ * @param {string} hotelId
  */
 export async function listHotelUsers(hotelId) {
   const res = await api.get(`/hotels/${hotelId}/users`)

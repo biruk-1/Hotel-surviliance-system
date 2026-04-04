@@ -1,34 +1,131 @@
-@import './styles/theme.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+@layer base {
+  :root {
+    /* ── Neutral background ── */
+    --background: 0 0% 98.5%;          /* #fafafa — off-white, not blinding */
+    --foreground: 220 26% 10%;          /* #111827 — near-black, readable */
+
+    /* ── Card surfaces ── */
+    --card: 0 0% 100%;
+    --card-foreground: 220 26% 10%;
+
+    /* ── Popovers / dropdowns ── */
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 26% 10%;
+
+    /* ── Primary ── dark slate, no blue */
+    --primary: 220 26% 12%;             /* #131d2e */
+    --primary-foreground: 0 0% 98%;
+
+    /* ── Secondary / muted tones ── */
+    --secondary: 220 14% 93%;           /* #e8ebf0 */
+    --secondary-foreground: 220 26% 12%;
+
+    --muted: 220 14% 94%;               /* light gray */
+    --muted-foreground: 220 10% 46%;    /* #68737d — readable gray */
+
+    /* ── Accent ── neutral slate for hover states */
+    --accent: 220 14% 92%;
+    --accent-foreground: 220 26% 12%;
+
+    /* ── Destructive ── muted red, not alarming */
+    --destructive: 0 65% 48%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* ── Borders & inputs ── very subtle */
+    --border: 220 14% 88%;              /* #dde1e8 */
+    --input: 220 14% 88%;
+    --ring: 220 10% 60%;                /* muted focus ring — no blue */
+
+    /* ── Border radius ── */
+    --radius: 0.4rem;
+
+    /* ───────────────────────────────────────────
+       Sidebar — deep charcoal (not pure black)
+    ─────────────────────────────────────────── */
+    --sidebar-background: 220 26% 10%;  /* #111827 */
+    --sidebar-foreground: 220 12% 72%;  /* #adb5c2 */
+
+    /* Icon badge — muted emerald (accent color) */
+    --sidebar-primary: 158 52% 34%;     /* #29796b — deep green */
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    /* Active nav item bg */
+    --sidebar-accent: 220 20% 18%;      /* #222c3c — clearly lighter than bg */
+    --sidebar-accent-foreground: 220 12% 92%; /* near white */
+
+    --sidebar-border: 220 20% 16%;
+    --sidebar-ring: 158 52% 34%;
+  }
 }
 
-html,
-body {
-  margin: 0;
-  min-height: 100%;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+    line-height: 1.3;
+  }
+
+  /* Subtle custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+
+  /* Text selection */
+  ::selection {
+    background: hsl(var(--primary) / 0.12);
+  }
 }
 
-body {
-  font-family:
-    'Segoe UI',
-    system-ui,
-    -apple-system,
-    sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--text);
-  background: var(--bg-base);
-  -webkit-font-smoothing: antialiased;
-}
+@layer components {
+  /* ── Table row enhancements ── */
+  .table-row-hover tbody tr {
+    @apply transition-colors duration-100;
+  }
+  .table-row-hover tbody tr:hover {
+    @apply bg-muted/60;
+  }
 
-#root {
-  min-height: 100vh;
-}
+  /* ── Page-level fade-in ── */
+  .page-enter {
+    @apply animate-in fade-in-0 slide-in-from-bottom-1 duration-200;
+  }
 
-a {
-  color: inherit;
+  /* ── Status dot ── */
+  .status-dot {
+    @apply inline-block h-2 w-2 rounded-full;
+  }
+  .status-dot--green  { @apply bg-emerald-500; }
+  .status-dot--amber  { @apply bg-amber-500; }
+  .status-dot--red    { @apply bg-red-500; }
+  .status-dot--gray   { @apply bg-slate-400; }
 }
