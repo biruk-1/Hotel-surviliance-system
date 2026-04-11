@@ -21,6 +21,17 @@ const createBlacklistBodyRules = (options = {}) => {
       .withMessage('dateOfBirth is required')
       .isISO8601({ strict: false })
       .withMessage('dateOfBirth must be a valid date (e.g. YYYY-MM-DD or ISO 8601)'),
+    body('phone')
+      .optional({ values: 'falsy' })
+      .trim()
+      .isLength({ max: 50 })
+      .withMessage('phone is too long')
+      .matches(/^[+\d\s\-(). ]+$/)
+      .withMessage('phone contains invalid characters'),
+    body('checkoutDate')
+      .optional({ values: 'falsy' })
+      .isISO8601({ strict: false })
+      .withMessage('checkoutDate must be a valid date'),
     body('reason').optional().isString().isLength({ max: 2000 }),
   ];
   if (optionalHotelId) {

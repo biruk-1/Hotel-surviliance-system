@@ -172,6 +172,8 @@ CREATE TABLE blacklist (
   full_name VARCHAR(255) NOT NULL,
   id_number VARCHAR(120) NOT NULL,
   date_of_birth DATE,
+  phone VARCHAR(50),
+  checkout_date DATE,
   reason TEXT,
   created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -216,6 +218,19 @@ CREATE TRIGGER trg_alerts_integrity
 CREATE TRIGGER trg_alerts_updated_at
   BEFORE UPDATE ON alerts
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- alert_user_reads — per-user “seen” state (sidebar badge; separate from acknowledged_at)
+-- -----------------------------------------------------------------------------
+CREATE TABLE alert_user_reads (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  alert_id UUID NOT NULL REFERENCES alerts(id) ON DELETE CASCADE,
+  read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, alert_id)
+);
+
+CREATE INDEX idx_alert_user_reads_user ON alert_user_reads (user_id);
+CREATE INDEX idx_alert_user_reads_alert ON alert_user_reads (alert_id);
 
 -- -----------------------------------------------------------------------------
 -- audit_logs — append-only style audit trail (optional FKs; preserve rows on delete)

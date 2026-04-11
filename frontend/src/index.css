@@ -4,61 +4,47 @@
 
 @layer base {
   :root {
-    /* ── Neutral background ── */
-    --background: 0 0% 98.5%;          /* #fafafa — off-white, not blinding */
-    --foreground: 220 26% 10%;          /* #111827 — near-black, readable */
+    /* Brand palette extracted from logo */
+    --background: 212 36% 97%;
+    --foreground: 219 60% 15%;
 
-    /* ── Card surfaces ── */
     --card: 0 0% 100%;
-    --card-foreground: 220 26% 10%;
-
-    /* ── Popovers / dropdowns ── */
+    --card-foreground: 219 60% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 26% 10%;
+    --popover-foreground: 219 60% 15%;
 
-    /* ── Primary ── dark slate, no blue */
-    --primary: 220 26% 12%;             /* #131d2e */
+    --primary: 221 100% 23%;
     --primary-foreground: 0 0% 98%;
 
-    /* ── Secondary / muted tones ── */
-    --secondary: 220 14% 93%;           /* #e8ebf0 */
-    --secondary-foreground: 220 26% 12%;
+    --secondary: 225 22% 86%;
+    --secondary-foreground: 219 60% 15%;
 
-    --muted: 220 14% 94%;               /* light gray */
-    --muted-foreground: 220 10% 46%;    /* #68737d — readable gray */
+    --muted: 215 30% 93%;
+    --muted-foreground: 223 21% 39%;
 
-    /* ── Accent ── neutral slate for hover states */
-    --accent: 220 14% 92%;
-    --accent-foreground: 220 26% 12%;
+    --accent: 218 72% 33%;
+    --accent-foreground: 0 0% 100%;
 
-    /* ── Destructive ── muted red, not alarming */
     --destructive: 0 65% 48%;
     --destructive-foreground: 0 0% 98%;
 
-    /* ── Borders & inputs ── very subtle */
-    --border: 220 14% 88%;              /* #dde1e8 */
-    --input: 220 14% 88%;
-    --ring: 220 10% 60%;                /* muted focus ring — no blue */
+    --border: 220 28% 84%;
+    --input: 220 28% 84%;
+    --ring: 218 72% 38%;
 
-    /* ── Border radius ── */
-    --radius: 0.4rem;
+    --radius: 0.6rem;
 
-    /* ───────────────────────────────────────────
-       Sidebar — deep charcoal (not pure black)
-    ─────────────────────────────────────────── */
-    --sidebar-background: 220 26% 10%;  /* #111827 */
-    --sidebar-foreground: 220 12% 72%;  /* #adb5c2 */
+    --sidebar-background: 221 98% 19%;
+    --sidebar-foreground: 216 39% 86%;
 
-    /* Icon badge — muted emerald (accent color) */
-    --sidebar-primary: 158 52% 34%;     /* #29796b — deep green */
+    --sidebar-primary: 218 72% 39%;
     --sidebar-primary-foreground: 0 0% 98%;
 
-    /* Active nav item bg */
-    --sidebar-accent: 220 20% 18%;      /* #222c3c — clearly lighter than bg */
-    --sidebar-accent-foreground: 220 12% 92%; /* near white */
+    --sidebar-accent: 220 70% 30%;
+    --sidebar-accent-foreground: 216 39% 95%;
 
-    --sidebar-border: 220 20% 16%;
-    --sidebar-ring: 158 52% 34%;
+    --sidebar-border: 221 64% 27%;
+    --sidebar-ring: 218 72% 42%;
   }
 }
 
@@ -74,10 +60,14 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 14.5px;
-    line-height: 1.65;
+    font-size: 14px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -128,4 +118,10 @@
   .status-dot--amber  { @apply bg-amber-500; }
   .status-dot--red    { @apply bg-red-500; }
   .status-dot--gray   { @apply bg-slate-400; }
+
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+  }
 }

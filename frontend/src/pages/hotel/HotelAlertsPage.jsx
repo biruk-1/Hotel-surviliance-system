@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 import RealtimeAlertToast from '../../components/alerts/RealtimeAlertToast'
-import { useNewAlertSocket } from '../../hooks/useNewAlertSocket'
 import { useHotelScope } from '../../hooks/useHotelScope'
-import { listAlertsForHotel, markAlertReviewed } from '../../services/alertService'
+import { useUnreadAlerts } from '@/context/UnreadAlertsContext'
+import {
+  listAlertsForHotel,
+  markAlertReviewed,
+  markAlertSeen,
+  markAllAlertsSeen,
+} from '../../services/alertService'
 import { getApiErrorMessage } from '../../utils/apiError'
 import { formatDateTime } from '../../utils/hotel'
 import { Button } from '@/components/ui/button'
@@ -14,6 +19,7 @@ import { Card } from '@/components/ui/card'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 15
 
@@ -26,8 +32,17 @@ function SeverityBadge({ severity }) {
   return <Badge variant="outline">{severity ?? '—'}</Badge>
 }
 
+function isAlertSeen(a) {
+  return Boolean(a.seen ?? a.read_at)
+}
+
 export default function HotelAlertsPage() {
   const { loading: scopeLoading, error: scopeError, hotels, selectedHotelId } = useHotelScope()
+  const {
+    refresh: refreshUnreadBadge,
+    hotelRealtimeAlert,
+    consumeHotelRealtimeAlert,
+  } = useUnreadAlerts()
   const selectedHotelIdRef = useRef(selectedHotelId)
   selectedHotelIdRef.current = selectedHotelId
 
@@ -38,6 +53,8 @@ export default function HotelAlertsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [actionId, setActionId] = useState(null)
+  const [seenActionId, setSeenActionId] = useState(null)
+  const [markAllBusy, setMarkAllBusy] = useState(false)
   const [actionError, setActionError] = useState(null)
   const [toast, setToast] = useState(null)
 
@@ -69,22 +86,52 @@ export default function HotelAlertsPage() {
 
   const refreshList = useCallback(() => setListVersion((v) => v + 1), [])
 
-  useNewAlertSocket({
-    enabled: Boolean(!scopeLoading && !scopeError && hotels.length > 0 && selectedHotelId),
-    onNewAlert: (alert) => {
-      setToast({
-        title: typeof alert.title === 'string' ? alert.title : 'New alert',
-        message: typeof alert.message === 'string' ? alert.message : undefined,
-      })
-      const hid = alert.hotel_id
-      if (hid && selectedHotelIdRef.current && hid === selectedHotelIdRef.current) {
-        setPage(1)
-        setListVersion((v) => v + 1)
-      }
-    },
-  })
+  useEffect(() => {
+    if (!hotelRealtimeAlert) return
+    const alert = hotelRealtimeAlert
+    setToast({
+      title: typeof alert.title === 'string' ? alert.title : 'New alert',
+      message: typeof alert.message === 'string' ? alert.message : undefined,
+    })
+    const hid = alert.hotel_id
+    if (hid && selectedHotelIdRef.current && hid === selectedHotelIdRef.current) {
+      setPage(1)
+      setListVersion((v) => v + 1)
+    }
+    consumeHotelRealtimeAlert()
+  }, [hotelRealtimeAlert, consumeHotelRealtimeAlert])
 
   const dismissToast = useCallback(() => setToast(null), [])
+
+  async function handleMarkSeen(alertId) {
+    setActionError(null)
+    setSeenActionId(alertId)
+    try {
+      const payload = await markAlertSeen(alertId)
+      const next = payload?.alert
+      if (next) setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, ...next } : a)))
+      await refreshUnreadBadge()
+    } catch (e) {
+      setActionError(getApiErrorMessage(e, 'Could not mark alert as seen'))
+    } finally {
+      setSeenActionId(null)
+    }
+  }
+
+  async function handleMarkAllSeen() {
+    if (!selectedHotelId) return
+    setActionError(null)
+    setMarkAllBusy(true)
+    try {
+      await markAllAlertsSeen({ hotelId: selectedHotelId })
+      await refreshUnreadBadge()
+      refreshList()
+    } catch (e) {
+      setActionError(getApiErrorMessage(e, 'Could not mark all as seen'))
+    } finally {
+      setMarkAllBusy(false)
+    }
+  }
 
   async function handleReview(alertId) {
     setActionError(null)
@@ -132,9 +179,22 @@ export default function HotelAlertsPage() {
     <div className="space-y-4">
       <RealtimeAlertToast toast={toast} onDismiss={dismissToast} />
 
-      <div>
-        <h2 className="text-xl font-semibold">Alerts</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">Alerts for the selected property only</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Alerts</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Alerts for the selected property only</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          disabled={markAllBusy || loading || !selectedHotelId}
+          onClick={handleMarkAllSeen}
+        >
+          {markAllBusy && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+          Mark all as seen
+        </Button>
       </div>
 
       {actionError && (
@@ -163,38 +223,62 @@ export default function HotelAlertsPage() {
               <TableHead>Severity</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Message</TableHead>
+              <TableHead>Guest phone</TableHead>
+              <TableHead>Stay checkout</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-[120px]" />
+              <TableHead>Seen</TableHead>
+              <TableHead>Review</TableHead>
+              <TableHead className="min-w-[200px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               [1, 2, 3].map((i) => (
                 <TableRow key={i}>
-                  {[1,2,3,4,5,6].map((j) => (
+                  {[1,2,3,4,5,6,7,8,9].map((j) => (
                     <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : alerts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   No alerts for this property.
                 </TableCell>
               </TableRow>
             ) : (
               alerts.map((a) => {
                 const reviewed = Boolean(a.acknowledged_at)
+                const seen = isAlertSeen(a)
+                const guestPhone = a.guest_phone ?? a.guestPhone ?? '—'
+                const stayOut = a.stay_check_out ?? a.stayCheckOut
                 return (
-                  <TableRow key={a.id}>
+                  <TableRow
+                    key={a.id}
+                    className={cn(
+                      !seen && 'bg-amber-50/60 dark:bg-amber-950/25 border-l-2 border-l-amber-500',
+                    )}
+                  >
                     <TableCell><SeverityBadge severity={a.severity} /></TableCell>
                     <TableCell className="font-medium">{a.title ?? '—'}</TableCell>
                     <TableCell className="max-w-xs truncate text-muted-foreground text-sm">
                       {a.message ?? '—'}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                      {guestPhone}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                      {stayOut ? formatDateTime(stayOut) : '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                       {formatDateTime(a.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      {seen ? (
+                        <Badge variant="secondary">Seen</Badge>
+                      ) : (
+                        <Badge className="bg-red-600 text-white hover:bg-red-600">Unseen</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {reviewed ? (
@@ -204,15 +288,26 @@ export default function HotelAlertsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={reviewed || actionId === a.id}
-                        onClick={() => handleReview(a.id)}
-                      >
-                        {actionId === a.id && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-                        {actionId === a.id ? 'Saving…' : reviewed ? 'Done' : 'Mark reviewed'}
-                      </Button>
+                      <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={seen || seenActionId === a.id}
+                          onClick={() => handleMarkSeen(a.id)}
+                        >
+                          {seenActionId === a.id && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                          {seenActionId === a.id ? '…' : seen ? 'Seen' : 'Mark seen'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={reviewed || actionId === a.id}
+                          onClick={() => handleReview(a.id)}
+                        >
+                          {actionId === a.id && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                          {actionId === a.id ? 'Saving…' : reviewed ? 'Done' : 'Mark reviewed'}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

@@ -16,7 +16,7 @@ router.get(
 router.get(
   '/hotels',
   authenticate,
-  authorizeRoles('police'),
+  authorizeRoles('police', 'admin'),
   asyncHandler(policeController.listHotelsForLookup)
 );
 

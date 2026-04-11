@@ -86,6 +86,7 @@ describeSec('Security: API hardening', () => {
 
     tokens = {
       police: await login(EMAILS.police),
+      admin: await login(EMAILS.admin),
       hotelA: await login(EMAILS.hotelA),
       hotelB: await login(EMAILS.hotelB),
     };
@@ -139,6 +140,27 @@ describeSec('Security: API hardening', () => {
           checkIn: new Date().toISOString(),
         });
       expect(res.status).toBe(403);
+    });
+
+    it('hotel role cannot access police-only report endpoints (e.g. blacklist export)', async () => {
+      const res = await request(app).get('/api/reports/blacklist').set(bearer(tokens.hotelA));
+      expect(res.status).toBe(403);
+    });
+
+    it('police and admin can access reports API', async () => {
+      const policeRes = await request(app).get('/api/reports/guests').set(bearer(tokens.police));
+      expect(policeRes.status).toBe(200);
+      expect(policeRes.body.success).toBe(true);
+      const adminRes = await request(app).get('/api/reports/alerts').set(bearer(tokens.admin));
+      expect(adminRes.status).toBe(200);
+      expect(adminRes.body.success).toBe(true);
+    });
+
+    it('hotel role can access guest report only (scoped to assigned hotels)', async () => {
+      const res = await request(app).get('/api/reports/guests').set(bearer(tokens.hotelA));
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data.rows)).toBe(true);
     });
   });
 

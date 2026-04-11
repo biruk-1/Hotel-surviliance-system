@@ -35,6 +35,11 @@ function guestDob(g) {
   return String(d)
 }
 
+function guestPhone(g) {
+  const p = g.phone ?? g.phoneNumber
+  return p != null && String(p).trim() !== '' ? String(p) : '—'
+}
+
 export default function PoliceGuestSearchPage() {
   const [name, setName] = useState('')
   const [idNumber, setIdNumber] = useState('')
@@ -214,9 +219,11 @@ export default function PoliceGuestSearchPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>ID number</TableHead>
                   <TableHead>Date of birth</TableHead>
+                  <TableHead>Phone</TableHead>
                   <TableHead className="min-w-[140px]">Hotel</TableHead>
                   <TableHead>Room</TableHead>
                   <TableHead>Check-in</TableHead>
+                  <TableHead>Checkout</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[88px] text-right">Details</TableHead>
                 </TableRow>
@@ -225,14 +232,14 @@ export default function PoliceGuestSearchPage() {
                 {loading ? (
                   [1, 2, 3].map((i) => (
                     <TableRow key={i}>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((j) => (
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((j) => (
                         <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : guests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       No guests match these filters.
                     </TableCell>
                   </TableRow>
@@ -250,6 +257,9 @@ export default function PoliceGuestSearchPage() {
                         <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                           {guestDob(g)}
                         </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {guestPhone(g)}
+                        </TableCell>
                         <TableCell>
                           <span
                             className={
@@ -264,6 +274,9 @@ export default function PoliceGuestSearchPage() {
                         <TableCell className="text-sm">{loc.room}</TableCell>
                         <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                           {loc.checkIn}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {loc.checkOut}
                         </TableCell>
                         <TableCell>
                           {loc.status === '—' ? (
@@ -336,6 +349,16 @@ export default function PoliceGuestSearchPage() {
                   ID: <code className="text-xs bg-muted rounded px-1">{detailGuest.id_number ?? detailGuest.idNumber}</code>
                   {' · '}
                   DOB: {guestDob(detailGuest)}
+                </p>
+                <p className="text-muted-foreground">
+                  Phone: {guestPhone(detailGuest)}
+                  {detailStays[0] && (detailStays[0].check_out ?? detailStays[0].checkOut) ? (
+                    <>
+                      {' · '}
+                      Planned checkout:{' '}
+                      {formatDateTime(detailStays[0].check_out ?? detailStays[0].checkOut)}
+                    </>
+                  ) : null}
                 </p>
                 <p className="text-xs text-muted-foreground font-mono">{detailGuest.id}</p>
               </div>

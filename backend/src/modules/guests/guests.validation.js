@@ -67,6 +67,14 @@ const createGuestWithStayRules = [
     .matches(/^[+\d\s\-(). ]+$/)
     .withMessage('phone contains invalid characters'),
 
+  body('phoneNumber')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('phoneNumber is too long')
+    .matches(/^[+\d\s\-(). ]+$/)
+    .withMessage('phoneNumber contains invalid characters'),
+
   body('email')
     .optional({ values: 'null' })
     .trim()

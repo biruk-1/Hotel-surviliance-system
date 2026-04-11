@@ -327,6 +327,34 @@ describeApi('API integration (auth, guests, stays, alerts, blacklist)', () => {
       const res = await request(app).patch('/api/alerts/bad-id').set(bearer(tokens.police));
       expect(res.status).toBe(400);
     });
+
+    it('GET /api/alerts/unread-count returns unseen total for police', async () => {
+      const res = await request(app).get('/api/alerts/unread-count').set(bearer(tokens.police));
+      expect(res.status).toBe(200);
+      expect(typeof res.body.data.count).toBe('number');
+      expect(res.body.data.count).toBeGreaterThanOrEqual(1);
+    });
+
+    it('POST /api/alerts/:id/read marks alert seen for current user', async () => {
+      const res = await request(app)
+        .post(`/api/alerts/${IDS.alert1}/read`)
+        .set(bearer(tokens.police));
+      expect(res.status).toBe(200);
+      expect(res.body.data.seen).toBe(true);
+      expect(res.body.data.alert.seen).toBe(true);
+
+      const countRes = await request(app).get('/api/alerts/unread-count').set(bearer(tokens.police));
+      expect(countRes.status).toBe(200);
+      expect(countRes.body.data.count).toBe(0);
+    });
+
+    it('GET /api/alerts includes seen flag on rows', async () => {
+      const res = await request(app).get('/api/alerts').set(bearer(tokens.police));
+      expect(res.status).toBe(200);
+      const row = res.body.data.alerts.find((a) => a.id === IDS.alert1);
+      expect(row).toBeDefined();
+      expect(row.seen).toBe(true);
+    });
   });
 
   describe('Blacklist', () => {

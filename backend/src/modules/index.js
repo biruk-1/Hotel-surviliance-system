@@ -8,6 +8,7 @@ const hotelsRoutes = require('./hotels/hotels.routes');
 const blacklistTopRoutes = require('./blacklist/blacklist.top.routes');
 const documentsRoutes = require('./documents/documents.routes');
 const policeRoutes = require('./police/police.routes');
+const reportsRoutes = require('./reports/reports.routes');
 const adminRoutes = require('./admin/admin.routes');
 
 const router = express.Router();
@@ -21,6 +22,7 @@ router.use('/blacklist', blacklistTopRoutes);
 router.use('/hotels', hotelsRoutes);
 router.use('/documents', documentsRoutes);
 router.use('/police', policeRoutes);
+router.use('/reports', reportsRoutes);
 router.use('/admin', adminRoutes);
 
 module.exports = router;

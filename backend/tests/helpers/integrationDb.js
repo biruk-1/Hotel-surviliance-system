@@ -71,53 +71,95 @@ async function hasHotelsTable() {
 }
 
 /**
+ * Older test DBs may still require 005 (nullable hotel_id + global id_number unique).
+ */
+async function ensureBlacklistGlobalMigration() {
+  if (!(await hasHotelsTable())) return;
+  const { rows } = await query(
+    `SELECT is_nullable FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'blacklist' AND column_name = 'hotel_id'
+     LIMIT 1`
+  );
+  if (rows.length === 0 || rows[0].is_nullable === 'YES') return;
+  const migPath = path.resolve(__dirname, '../../sql/migrations/005_blacklist_global.sql');
+  await pool.query(fs.readFileSync(migPath, 'utf8'));
+}
+
+/**
+ * Older test databases may lack columns added after the initial schema apply.
+ */
+async function ensureBlacklistPhoneCheckoutMigration() {
+  if (!(await hasHotelsTable())) return;
+  const { rows } = await query(
+    `SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'blacklist' AND column_name = 'phone'
+     LIMIT 1`
+  );
+  if (rows.length > 0) return;
+  const migPath = path.resolve(__dirname, '../../sql/migrations/006_blacklist_phone_checkout.sql');
+  await pool.query(fs.readFileSync(migPath, 'utf8'));
+}
+
+/**
  * Ensure sql/schema.sql has been applied to the test database.
  *
  * Strategy:
- *   1. If the hotels table already exists, return immediately (idempotent).
- *   2. Try to execute the full SQL via the pg pool (works when the driver
- *      handles multi-statement strings, which node-postgres does for plain queries).
- *   3. Fall back to running `psql -f schema.sql` via child_process if the pool
- *      attempt fails or the table is still absent afterwards.
+ *   1. If the hotels table is missing, apply schema.sql (pool, then psql fallback).
+ *   2. Always run lightweight migrations needed for older DBs (e.g. blacklist columns).
  */
 async function ensureSchema() {
-  if (await hasHotelsTable()) return;
-
-  const schemaPath = path.resolve(__dirname, '../../sql/schema.sql');
-  const sql        = fs.readFileSync(schemaPath, 'utf8');
-  const config     = require('../../src/config');
-
-  let poolErr = null;
-  try {
-    await pool.query(sql);
-  } catch (e) {
-    poolErr = e;
-  }
-
-  if (await hasHotelsTable()) return;
-
-  try {
-    execFileSync(process.env.PSQL_PATH || 'psql', [
-      '-v', 'ON_ERROR_STOP=1',
-      '-h', config.db.host,
-      '-p', String(config.db.port),
-      '-U', config.db.user,
-      '-d', config.db.name,
-      '-f', schemaPath,
-    ], {
-      env:   { ...process.env, PGPASSWORD: config.db.password },
-      stdio: 'pipe',
-    });
-  } catch (psqlErr) {
-    const hint = poolErr ? ` Pool error: ${poolErr.message}.` : '';
-    throw new Error(
-      `Test DB schema missing (public.hotels absent). Apply backend/sql/schema.sql to "${config.db.name}".${hint} psql: ${psqlErr.message}`
-    );
-  }
-
   if (!(await hasHotelsTable())) {
-    throw new Error('Schema apply did not create public.hotels. Check sql/schema.sql and DB permissions.');
+    const schemaPath = path.resolve(__dirname, '../../sql/schema.sql');
+    const sql = fs.readFileSync(schemaPath, 'utf8');
+    const config = require('../../src/config');
+
+    let poolErr = null;
+    try {
+      await pool.query(sql);
+    } catch (e) {
+      poolErr = e;
+    }
+
+    if (!(await hasHotelsTable())) {
+      try {
+        execFileSync(process.env.PSQL_PATH || 'psql', [
+          '-v', 'ON_ERROR_STOP=1',
+          '-h', config.db.host,
+          '-p', String(config.db.port),
+          '-U', config.db.user,
+          '-d', config.db.name,
+          '-f', schemaPath,
+        ], {
+          env: { ...process.env, PGPASSWORD: config.db.password },
+          stdio: 'pipe',
+        });
+      } catch (psqlErr) {
+        const hint = poolErr ? ` Pool error: ${poolErr.message}.` : '';
+        throw new Error(
+          `Test DB schema missing (public.hotels absent). Apply backend/sql/schema.sql to "${config.db.name}".${hint} psql: ${psqlErr.message}`
+        );
+      }
+    }
+
+    if (!(await hasHotelsTable())) {
+      throw new Error('Schema apply did not create public.hotels. Check sql/schema.sql and DB permissions.');
+    }
   }
+
+  await ensureBlacklistGlobalMigration();
+  await ensureBlacklistPhoneCheckoutMigration();
+  await ensureAlertUserReadsMigration();
+}
+
+async function ensureAlertUserReadsMigration() {
+  if (!(await hasHotelsTable())) return;
+  const { rows } = await query(
+    `SELECT 1 FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_name = 'alert_user_reads' LIMIT 1`
+  );
+  if (rows.length > 0) return;
+  const migPath = path.resolve(__dirname, '../../sql/migrations/007_alert_user_reads.sql');
+  await pool.query(fs.readFileSync(migPath, 'utf8'));
 }
 
 /**
@@ -127,7 +169,7 @@ async function ensureSchema() {
  */
 async function resetDatabase() {
   await deleteFrom([
-    'audit_logs', 'alerts', 'documents', 'blacklist',
+    'audit_logs', 'alert_user_reads', 'alerts', 'documents', 'blacklist',
     'stays', 'hotel_users', 'guests', 'users', 'hotels',
   ]);
 }

@@ -46,6 +46,8 @@ export default function PoliceBlacklistPage() {
   const [formName, setFormName] = useState('')
   const [formIdNumber, setFormIdNumber] = useState('')
   const [formDob, setFormDob] = useState('')
+  const [formPhone, setFormPhone] = useState('')
+  const [formCheckout, setFormCheckout] = useState('')
   const [formReason, setFormReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState(null)
@@ -81,12 +83,16 @@ export default function PoliceBlacklistPage() {
         name: formName.trim(),
         idNumber: formIdNumber.trim(),
         dateOfBirth: formDob,
+        phone: formPhone.trim() || undefined,
+        checkoutDate: formCheckout || undefined,
         reason: formReason.trim() || undefined,
       })
       setFormSuccess('Entry added to blacklist.')
       setFormName('')
       setFormIdNumber('')
       setFormDob('')
+      setFormPhone('')
+      setFormCheckout('')
       setFormReason('')
       setDialogOpen(false)
       await loadList()
@@ -158,6 +164,14 @@ export default function PoliceBlacklistPage() {
                   <Input id="bl-dob" type="date" value={formDob} onChange={(e) => setFormDob(e.target.value)} required disabled={submitting} />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="bl-phone">Phone <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Input id="bl-phone" type="tel" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} disabled={submitting} autoComplete="tel" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bl-checkout">Planned checkout <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Input id="bl-checkout" type="date" value={formCheckout} onChange={(e) => setFormCheckout(e.target.value)} disabled={submitting} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="bl-reason">Reason <span className="text-muted-foreground text-xs">(optional)</span></Label>
                   <Input id="bl-reason" value={formReason} onChange={(e) => setFormReason(e.target.value)} disabled={submitting} />
                 </div>
@@ -205,6 +219,8 @@ export default function PoliceBlacklistPage() {
               <TableHead>Name</TableHead>
               <TableHead>ID Number</TableHead>
               <TableHead>Date of Birth</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Planned checkout</TableHead>
               <TableHead>Reason</TableHead>
               <TableHead>Date Added</TableHead>
               <TableHead className="w-[80px]" />
@@ -214,14 +230,14 @@ export default function PoliceBlacklistPage() {
             {loading ? (
               [1, 2, 3].map((i) => (
                 <TableRow key={i}>
-                  {[1,2,3,4,5,6].map((j) => (
+                  {[1,2,3,4,5,6,7,8].map((j) => (
                     <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : entries.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No blacklist entries yet.
                 </TableCell>
               </TableRow>
@@ -238,6 +254,12 @@ export default function PoliceBlacklistPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {formatDob(row.date_of_birth ?? row.dateOfBirth)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                    {row.phone != null && String(row.phone).trim() !== '' ? row.phone : '—'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                    {formatDob(row.checkout_date ?? row.checkoutDate)}
                   </TableCell>
                   <TableCell className="max-w-[180px] truncate text-muted-foreground text-sm">
                     {row.reason ?? '—'}

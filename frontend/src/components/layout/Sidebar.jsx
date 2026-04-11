@@ -14,9 +14,12 @@ import {
   Shield,
   Hotel,
   UserCog,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { NavNotificationBadge } from '@/components/ui/nav-notification-badge'
+import { useUnreadAlerts } from '@/context/UnreadAlertsContext'
 
 const NAV = {
   hotel: {
@@ -27,6 +30,7 @@ const NAV = {
       { to: '/hotel/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
       { to: '/hotel/guests/register', label: 'Register Guest', icon: UserPlus, end: true },
       { to: '/hotel/guests', label: 'Guest List', icon: Users, end: true },
+      { to: '/hotel/reports', label: 'Reports', icon: FileText, end: true },
       { to: '/hotel/alerts', label: 'Alerts', icon: Bell, end: true },
     ],
   },
@@ -39,6 +43,7 @@ const NAV = {
       { to: '/police/guests', label: 'Search Guests', icon: Search, end: true },
       { to: '/police/alerts', label: 'Alerts', icon: Bell, end: true },
       { to: '/police/blacklist', label: 'Blacklist', icon: ShieldAlert, end: true },
+      { to: '/police/reports', label: 'Reports', icon: FileText, end: true },
     ],
   },
   admin: {
@@ -49,23 +54,27 @@ const NAV = {
       { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
       { to: '/admin/hotels', label: 'Hotels', icon: Building2, end: true },
       { to: '/admin/users', label: 'Users', icon: UserCog, end: true },
+      { to: '/admin/reports', label: 'Reports', icon: FileText, end: true },
+      { to: '/admin/alerts', label: 'Alerts', icon: Bell, end: true },
     ],
   },
 }
 
-export default function Sidebar({ portal }) {
+export default function Sidebar({ portal, className }) {
   const [collapsed, setCollapsed] = useState(false)
   const config = NAV[portal]
   const PortalIcon = config.icon
+  const { count: unreadAlertCount } = useUnreadAlerts()
 
   return (
     <TooltipProvider delayDuration={100}>
       <aside
         className={cn(
-          'flex flex-col h-full bg-sidebar text-sidebar-foreground',
+          'flex h-full min-h-0 shrink-0 flex-col bg-sidebar text-sidebar-foreground',
           'border-r border-sidebar-border',
-          'transition-[width] duration-200 ease-in-out overflow-hidden shrink-0',
+          'transition-[width] duration-200 ease-in-out overflow-hidden',
           collapsed ? 'w-14' : 'w-56',
+          className,
         )}
       >
         {/* ── Brand ── */}
@@ -94,36 +103,12 @@ export default function Sidebar({ portal }) {
         </div>
 
         {/* ── Nav items ── */}
-        <nav className="flex-1 flex flex-col gap-0.5 p-2 pt-3">
+        <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2 pt-3">
           {config.items.map((item) => {
             const Icon = item.icon
+            const isAlerts = item.to.endsWith('/alerts')
 
-            const linkContent = ({ isActive }) => (
-              <span
-                className={cn(
-                  'flex items-center gap-2.5 w-full rounded-md px-2.5 py-2 text-sm',
-                  'transition-colors duration-100 cursor-pointer',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                    : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
-                  collapsed && 'justify-center px-0',
-                )}
-              >
-                {/* Active indicator bar */}
-                {!collapsed && (
-                  <span
-                    className={cn(
-                      'absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full transition-opacity duration-100',
-                      isActive ? 'opacity-100 bg-sidebar-primary' : 'opacity-0',
-                    )}
-                    aria-hidden
-                  />
-                )}
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </span>
-            )
-
+            /** NavLink must receive a single function child to get `isActive`; passing a function as a sibling breaks rendering. */
             const navLink = (
               <NavLink
                 key={item.to}
@@ -131,7 +116,35 @@ export default function Sidebar({ portal }) {
                 end={item.end}
                 className="relative block"
               >
-                {linkContent}
+                {({ isActive }) => (
+                  <>
+                    {isAlerts && (
+                      <NavNotificationBadge count={unreadAlertCount} collapsed={collapsed} />
+                    )}
+                    <span
+                      className={cn(
+                        'flex items-center gap-2.5 w-full rounded-md px-2.5 py-2 text-sm',
+                        'transition-colors duration-100 cursor-pointer',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                          : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+                        collapsed && 'justify-center px-0',
+                      )}
+                    >
+                      {!collapsed && (
+                        <span
+                          className={cn(
+                            'absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full transition-opacity duration-100',
+                            isActive ? 'opacity-100 bg-sidebar-primary' : 'opacity-0',
+                          )}
+                          aria-hidden
+                        />
+                      )}
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+                    </span>
+                  </>
+                )}
               </NavLink>
             )
 

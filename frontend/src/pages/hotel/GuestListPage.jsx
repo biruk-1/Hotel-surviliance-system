@@ -48,8 +48,10 @@ export default function GuestListPage() {
               id: g.id,
               name: g.full_name ?? g.fullName ?? '—',
               idNumber: g.id_number ?? g.idNumber ?? '—',
+              phone: detail.guest?.phone ?? g.phone ?? '—',
               room: stay?.room_number ?? stay?.roomNumber ?? '—',
               checkIn: stay?.check_in ?? stay?.checkIn,
+              checkOut: stay?.check_out ?? stay?.checkOut ?? g.primary_check_out ?? g.primaryCheckOut,
             }
           }),
         )
@@ -73,6 +75,7 @@ export default function GuestListPage() {
       (r) =>
         r.name.toLowerCase().includes(q) ||
         r.idNumber.toLowerCase().includes(q) ||
+        String(r.phone).toLowerCase().includes(q) ||
         String(r.id).toLowerCase().includes(q),
     )
   }, [rows, search])
@@ -141,22 +144,24 @@ export default function GuestListPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>ID Number</TableHead>
+              <TableHead>Phone</TableHead>
               <TableHead>Room</TableHead>
               <TableHead>Check-in</TableHead>
+              <TableHead>Checkout</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               [1, 2, 3, 4, 5].map((i) => (
                 <TableRow key={i}>
-                  {[1, 2, 3, 4].map((j) => (
+                  {[1, 2, 3, 4, 5, 6].map((j) => (
                     <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : filteredRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No guests match this view.
                 </TableCell>
               </TableRow>
@@ -167,8 +172,10 @@ export default function GuestListPage() {
                   <TableCell>
                     <code className="text-xs bg-muted rounded px-1.5 py-0.5">{r.idNumber}</code>
                   </TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{r.phone}</TableCell>
                   <TableCell>{r.room}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{formatDateTime(r.checkIn)}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{formatDateTime(r.checkOut)}</TableCell>
                 </TableRow>
               ))
             )}

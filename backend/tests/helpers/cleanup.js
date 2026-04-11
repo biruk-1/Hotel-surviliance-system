@@ -38,6 +38,7 @@ const { query } = require('../../src/config/database');
  */
 const ALL_TABLES = [
   'audit_logs',
+  'alert_user_reads',
   'alerts',
   'documents',
   'blacklist',

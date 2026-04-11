@@ -35,15 +35,17 @@ export function primaryStayDisplay(guest) {
     guest.primary_hotel_name ?? guest.primaryHotelName ?? null
   const room = guest.primary_room_number ?? guest.primaryRoomNumber ?? null
   const checkIn = guest.primary_check_in ?? guest.primaryCheckIn ?? null
+  const checkOut = guest.primary_check_out ?? guest.primaryCheckOut ?? null
   const status = guest.primary_stay_status ?? guest.primaryStayStatus ?? null
 
-  const hasAnyStay = Boolean(hotel || room || checkIn || status)
+  const hasAnyStay = Boolean(hotel || room || checkIn || checkOut || status)
 
   if (!hasAnyStay) {
     return {
       hotelLabel: 'No active stay',
       room: '—',
       checkIn: '—',
+      checkOut: '—',
       status: '—',
     }
   }
@@ -52,6 +54,7 @@ export function primaryStayDisplay(guest) {
     hotelLabel: hotel || 'Unknown',
     room: room || '—',
     checkIn: formatDateTime(checkIn),
+    checkOut: checkOut ? formatDateTime(checkOut) : '—',
     status: formatStayStatus(status),
   }
 }

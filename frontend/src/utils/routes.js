@@ -3,16 +3,19 @@ export const ROUTES = {
   hotel: {
     root: '/hotel',
     dashboard: '/hotel/dashboard',
+    reports: '/hotel/reports',
   },
   police: {
     root: '/police',
     dashboard: '/police/dashboard',
+    reports: '/police/reports',
   },
   admin: {
     root: '/admin',
     dashboard: '/admin/dashboard',
     hotels: '/admin/hotels',
     users: '/admin/users',
+    reports: '/admin/reports',
   },
 }
 

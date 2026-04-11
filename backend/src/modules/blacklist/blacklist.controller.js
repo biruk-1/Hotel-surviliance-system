@@ -3,7 +3,7 @@ const HttpError = require('../../utils/httpError');
 const { writeAuditLog, AUDIT_ACTIONS, ENTITY_TYPES } = require('../../utils/auditLog');
 const { paginationMeta } = require('../../middlewares/pagination.middleware');
 
-const BL_FIELDS = `id, hotel_id, full_name, id_number, date_of_birth, reason, created_by_user_id, created_at, updated_at`;
+const BL_FIELDS = `id, hotel_id, full_name, id_number, date_of_birth, phone, checkout_date, reason, created_by_user_id, created_at, updated_at`;
 
 function parseDateOnly(value) {
   if (!value) return null;
@@ -66,18 +66,31 @@ async function createBlacklistEntry(req, res, next) {
       (fromBody != null && String(fromBody).trim() !== '' ? String(fromBody).trim() : null) ||
       null;
 
-    const { name, idNumber, dateOfBirth, reason } = req.body;
+    const { name, idNumber, dateOfBirth, reason, phone, checkoutDate } = req.body;
     const dob = parseDateOnly(dateOfBirth);
     if (!dob) {
       next(new HttpError(400, 'dateOfBirth must be a valid date'));
       return;
     }
+    const checkout = checkoutDate != null && String(checkoutDate).trim() !== ''
+      ? parseDateOnly(checkoutDate)
+      : null;
+    const phoneTrimmed = phone != null && String(phone).trim() !== '' ? String(phone).trim() : null;
 
     const { rows } = await db.query(
-      `INSERT INTO blacklist (hotel_id, full_name, id_number, date_of_birth, reason, created_by_user_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO blacklist (hotel_id, full_name, id_number, date_of_birth, phone, checkout_date, reason, created_by_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING ${BL_FIELDS}`,
-      [hotelId, name.trim(), idNumber.trim(), dob, reason != null ? String(reason).trim() : null, req.user.id]
+      [
+        hotelId,
+        name.trim(),
+        idNumber.trim(),
+        dob,
+        phoneTrimmed,
+        checkout,
+        reason != null ? String(reason).trim() : null,
+        req.user.id,
+      ]
     );
 
     const entry = rows[0];

@@ -14,7 +14,7 @@ const GUEST_CORE = `g.id, g.full_name, g.id_number, g.date_of_birth, g.phone, g.
 /** Prefer active stay, then most recent check-in — for “where is this guest now”. */
 const PRIMARY_STAY_JOIN = `
 LEFT JOIN LATERAL (
-  SELECT s.hotel_id, s.room_number, s.check_in, s.status
+  SELECT s.hotel_id, s.room_number, s.check_in, s.check_out, s.status
   FROM stays s
   WHERE s.guest_id = g.id
   ORDER BY (CASE WHEN s.status = 'active' THEN 0 ELSE 1 END), s.check_in DESC NULLS LAST
@@ -23,7 +23,7 @@ LEFT JOIN LATERAL (
 LEFT JOIN hotels ph ON ph.id = ps.hotel_id
 `;
 
-const GUEST_LIST_SELECT = `${GUEST_CORE}, ph.name AS primary_hotel_name, ps.room_number AS primary_room_number, ps.check_in AS primary_check_in, ps.status AS primary_stay_status`;
+const GUEST_LIST_SELECT = `${GUEST_CORE}, ph.name AS primary_hotel_name, ps.room_number AS primary_room_number, ps.check_in AS primary_check_in, ps.check_out AS primary_check_out, ps.status AS primary_stay_status`;
 
 function getNameIdSearchFromQuery(req) {
   const nameRaw = req.query.name;
@@ -85,12 +85,14 @@ async function createGuestWithStay(req, res, next) {
     checkIn,
     checkOut,
     roomNumber,
-    phone,
+    phone: phoneBody,
+    phoneNumber,
     email,
     notes,
     dateOfBirth,
     status,
   } = req.body;
+  const phone = phoneBody ?? phoneNumber;
 
   // ── Phase 1: transaction — hold the dedicated pool client only for the DB writes ──
   // Releasing it immediately after COMMIT is critical for throughput under load:

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
-import { listAlerts, markAlertReviewed } from '../../services/alertService'
+import { useUnreadAlerts } from '@/context/UnreadAlertsContext'
+import {
+  listAlerts,
+  markAlertReviewed,
+  markAlertSeen,
+  markAllAlertsSeen,
+} from '../../services/alertService'
 import { getApiErrorMessage } from '../../utils/apiError'
 import { formatDateTime } from '../../utils/hotel'
 import { parseAlertDetailFields } from '../../utils/policeUi'
@@ -12,6 +18,7 @@ import { Card } from '@/components/ui/card'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
@@ -24,13 +31,20 @@ function SeverityBadge({ severity }) {
   return <Badge variant="outline">{severity ?? '—'}</Badge>
 }
 
+function isAlertSeen(a) {
+  return Boolean(a.seen ?? a.read_at)
+}
+
 export default function PoliceAlertsPage() {
+  const { refresh: refreshUnreadBadge, policeAlertsListBump } = useUnreadAlerts()
   const [page, setPage] = useState(1)
   const [alerts, setAlerts] = useState([])
   const [pagination, setPagination] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [actionId, setActionId] = useState(null)
+  const [seenActionId, setSeenActionId] = useState(null)
+  const [markAllBusy, setMarkAllBusy] = useState(false)
   const [actionError, setActionError] = useState(null)
   const [listVersion, setListVersion] = useState(0)
 
@@ -56,6 +70,41 @@ export default function PoliceAlertsPage() {
 
   const refreshList = useCallback(() => setListVersion((v) => v + 1), [])
 
+  useEffect(() => {
+    if (!policeAlertsListBump) return
+    setPage(1)
+    setListVersion((v) => v + 1)
+  }, [policeAlertsListBump])
+
+  async function handleMarkSeen(alertId) {
+    setActionError(null)
+    setSeenActionId(alertId)
+    try {
+      const payload = await markAlertSeen(alertId)
+      const next = payload?.alert
+      if (next) setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, ...next } : a)))
+      await refreshUnreadBadge()
+    } catch (e) {
+      setActionError(getApiErrorMessage(e, 'Could not mark alert as seen'))
+    } finally {
+      setSeenActionId(null)
+    }
+  }
+
+  async function handleMarkAllSeen() {
+    setActionError(null)
+    setMarkAllBusy(true)
+    try {
+      await markAllAlertsSeen({})
+      await refreshUnreadBadge()
+      refreshList()
+    } catch (e) {
+      setActionError(getApiErrorMessage(e, 'Could not mark all as seen'))
+    } finally {
+      setMarkAllBusy(false)
+    }
+  }
+
   async function handleReview(alertId) {
     setActionError(null)
     setActionId(alertId)
@@ -72,11 +121,24 @@ export default function PoliceAlertsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold">Alerts</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          All alerts across properties — hotel and guest location are shown on every row.
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Alerts</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            All alerts across properties — hotel and guest location are shown on every row.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          disabled={markAllBusy || loading}
+          onClick={handleMarkAllSeen}
+        >
+          {markAllBusy && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+          Mark all as seen
+        </Button>
       </div>
 
       {actionError && (
@@ -104,38 +166,44 @@ export default function PoliceAlertsPage() {
             <TableRow>
               <TableHead className="min-w-[120px] whitespace-nowrap">Hotel</TableHead>
               <TableHead className="min-w-[100px]">Guest</TableHead>
+              <TableHead className="whitespace-nowrap">Guest phone</TableHead>
               <TableHead className="whitespace-nowrap">Room</TableHead>
               <TableHead className="whitespace-nowrap">Stay check-in</TableHead>
+              <TableHead className="whitespace-nowrap">Stay checkout</TableHead>
               <TableHead className="whitespace-nowrap">Match</TableHead>
               <TableHead className="min-w-[160px]">Reason / details</TableHead>
               <TableHead className="whitespace-nowrap">Alert time</TableHead>
               <TableHead>Severity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-[120px]" />
+              <TableHead>Seen</TableHead>
+              <TableHead>Review</TableHead>
+              <TableHead className="min-w-[200px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               [1, 2, 3].map((i) => (
                 <TableRow key={i}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((j) => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((j) => (
                     <TableCell key={j}><Skeleton className="h-4 w-full min-w-[4rem]" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : alerts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                   No alerts.
                 </TableCell>
               </TableRow>
             ) : (
               alerts.map((a) => {
                 const reviewed = Boolean(a.acknowledged_at)
+                const seen = isAlertSeen(a)
                 const hotelName = a.hotel_name ?? a.hotelName ?? 'Unknown'
                 const guestName = a.guest_full_name ?? a.guestFullName ?? '—'
+                const guestPhone = a.guest_phone ?? a.guestPhone ?? '—'
                 const room = a.stay_room_number ?? a.stayRoomNumber ?? '—'
                 const stayIn = a.stay_check_in ?? a.stayCheckIn
+                const stayOut = a.stay_check_out ?? a.stayCheckOut
                 const parsed = parseAlertDetailFields(a.message)
                 const matchDisplay = parsed.matchPercent ? `${parsed.matchPercent}%` : '—'
                 const reasonDisplay = parsed.reason
@@ -144,7 +212,12 @@ export default function PoliceAlertsPage() {
                   ?? '—'
 
                 return (
-                  <TableRow key={a.id}>
+                  <TableRow
+                    key={a.id}
+                    className={cn(
+                      !seen && 'bg-amber-50/60 dark:bg-amber-950/25 border-l-2 border-l-amber-500',
+                    )}
+                  >
                     <TableCell className="align-top">
                       <span className="font-semibold text-foreground text-sm leading-snug block">
                         {hotelName}
@@ -157,10 +230,16 @@ export default function PoliceAlertsPage() {
                       {guestName}
                     </TableCell>
                     <TableCell className="align-top text-sm text-muted-foreground whitespace-nowrap">
+                      {guestPhone}
+                    </TableCell>
+                    <TableCell className="align-top text-sm text-muted-foreground whitespace-nowrap">
                       {room}
                     </TableCell>
                     <TableCell className="align-top text-muted-foreground text-sm whitespace-nowrap">
                       {stayIn ? formatDateTime(stayIn) : '—'}
+                    </TableCell>
+                    <TableCell className="align-top text-muted-foreground text-sm whitespace-nowrap">
+                      {stayOut ? formatDateTime(stayOut) : '—'}
                     </TableCell>
                     <TableCell className="align-top whitespace-nowrap">
                       {matchDisplay !== '—' ? (
@@ -184,6 +263,13 @@ export default function PoliceAlertsPage() {
                     </TableCell>
                     <TableCell className="align-top"><SeverityBadge severity={a.severity} /></TableCell>
                     <TableCell className="align-top">
+                      {seen ? (
+                        <Badge variant="secondary">Seen</Badge>
+                      ) : (
+                        <Badge className="bg-red-600 text-white hover:bg-red-600">Unseen</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="align-top">
                       {reviewed ? (
                         <Badge variant="secondary">Reviewed</Badge>
                       ) : (
@@ -191,15 +277,26 @@ export default function PoliceAlertsPage() {
                       )}
                     </TableCell>
                     <TableCell className="align-top">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={reviewed || actionId === a.id}
-                        onClick={() => handleReview(a.id)}
-                      >
-                        {actionId === a.id && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-                        {actionId === a.id ? 'Saving…' : reviewed ? 'Done' : 'Mark reviewed'}
-                      </Button>
+                      <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={seen || seenActionId === a.id}
+                          onClick={() => handleMarkSeen(a.id)}
+                        >
+                          {seenActionId === a.id && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                          {seenActionId === a.id ? '…' : seen ? 'Seen' : 'Mark seen'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={reviewed || actionId === a.id}
+                          onClick={() => handleReview(a.id)}
+                        >
+                          {actionId === a.id && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                          {actionId === a.id ? 'Saving…' : reviewed ? 'Done' : 'Mark reviewed'}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

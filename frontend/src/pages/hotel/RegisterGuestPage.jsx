@@ -24,6 +24,8 @@ export default function RegisterGuestPage() {
   const [idNumber, setIdNumber] = useState('')
   const [hotelId, setHotelId] = useState('')
   const [checkInLocal, setCheckInLocal] = useState('')
+  const [checkOutLocal, setCheckOutLocal] = useState('')
+  const [phone, setPhone] = useState('')
   const [roomNumber, setRoomNumber] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -41,6 +43,8 @@ export default function RegisterGuestPage() {
     const checkIn = toIsoFromLocalDatetime(checkInLocal)
     if (!checkIn) { setError('Check-in date and time are required'); return }
     if (!hotelId) { setError('Select a property'); return }
+    const checkOut = checkOutLocal ? toIsoFromLocalDatetime(checkOutLocal) : undefined
+    if (checkOutLocal && !checkOut) { setError('Checkout date and time are invalid'); return }
     setSubmitting(true)
     try {
       const data = await createGuestWithStay({
@@ -48,6 +52,8 @@ export default function RegisterGuestPage() {
         idNumber: idNumber.trim(),
         hotelId,
         checkIn,
+        checkOut,
+        phone: phone.trim() || undefined,
         roomNumber: roomNumber.trim() || undefined,
         dateOfBirth: dateOfBirth || undefined,
       })
@@ -57,6 +63,8 @@ export default function RegisterGuestPage() {
       setRoomNumber('')
       setDateOfBirth('')
       setCheckInLocal('')
+      setCheckOutLocal('')
+      setPhone('')
     } catch (err) {
       setError(getApiErrorMessage(err, 'Registration failed'))
     } finally {
@@ -187,6 +195,30 @@ export default function RegisterGuestPage() {
                   value={checkInLocal}
                   onChange={(e) => setCheckInLocal(e.target.value)}
                   required
+                  disabled={submitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={submitting}
+                  autoComplete="tel"
+                  placeholder="+251 9…"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="checkOut">Planned Checkout</Label>
+                <Input
+                  id="checkOut"
+                  type="datetime-local"
+                  value={checkOutLocal}
+                  onChange={(e) => setCheckOutLocal(e.target.value)}
                   disabled={submitting}
                 />
               </div>

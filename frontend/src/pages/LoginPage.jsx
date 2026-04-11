@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Shield, Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { login as loginWithApi } from '../services/authService'
 import { getApiErrorMessage } from '../utils/apiError'
@@ -40,76 +40,63 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-[360px] space-y-8">
+    <div className="w-full max-w-[420px] space-y-6">
+      <div className="text-center">
+        <h1 className="text-xl font-semibold tracking-tight">Sign in to continue</h1>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+          Authorized personnel only. All activity is logged.
+        </p>
+      </div>
 
-        {/* Brand mark */}
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary shadow-card">
-            <Shield className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Hotel Surveillance</h1>
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-              Authorized personnel only.
-              <br />
-              Sessions are audited.
-            </p>
-          </div>
+      <div className="rounded-xl border border-border bg-card shadow-card p-6 space-y-5 transition-shadow duration-150 hover:shadow-card-hover">
+        <div>
+          <h2 className="text-[15px] font-semibold">Account Access</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Use your official credentials</p>
         </div>
 
-        {/* Form card */}
-        <div className="rounded-lg border border-border bg-card shadow-card p-6 space-y-5">
-          <div>
-            <h2 className="text-[15px] font-semibold">Sign in to your account</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">Enter your credentials below</p>
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          {error && (
+            <Alert variant="destructive" className="py-3">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email address</Label>
+            <Input
+              id="email"
+              type="email"
+              name="email"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@agency.gov"
+              disabled={submitting}
+              required
+            />
           </div>
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            {error && (
-              <Alert variant="destructive" className="py-3">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              disabled={submitting}
+              required
+            />
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                type="email"
-                name="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@agency.gov"
-                disabled={submitting}
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                disabled={submitting}
-                required
-              />
-            </div>
-
-            <Button type="submit" className="w-full mt-1" disabled={submitting}>
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {submitting ? 'Signing in…' : 'Sign in'}
-            </Button>
-          </form>
-        </div>
-
+          <Button type="submit" className="w-full mt-1" disabled={submitting}>
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {submitting ? 'Signing in...' : 'Sign in'}
+          </Button>
+        </form>
       </div>
     </div>
   )

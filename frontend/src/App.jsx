@@ -6,6 +6,7 @@ import RequireRole from './components/auth/RequireRole'
 import RootRedirect from './components/auth/RootRedirect'
 import { HotelScopeProvider } from './context/HotelScopeProvider'
 import DashboardLayout from './components/layout/DashboardLayout'
+import PublicLayout from './components/layout/PublicLayout'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminHotelsPage from './pages/admin/AdminHotelsPage'
 import AdminUsersPage from './pages/admin/AdminUsersPage'
@@ -13,11 +14,13 @@ import GuestListPage from './pages/hotel/GuestListPage'
 import HotelAlertsPage from './pages/hotel/HotelAlertsPage'
 import HotelDashboardPage from './pages/hotel/HotelDashboardPage'
 import RegisterGuestPage from './pages/hotel/RegisterGuestPage'
+import HotelGuestReportPage from './pages/hotel/HotelGuestReportPage'
 import LoginPage from './pages/LoginPage'
 import PoliceAlertsPage from './pages/police/PoliceAlertsPage'
 import PoliceBlacklistPage from './pages/police/PoliceBlacklistPage'
 import PoliceDashboardPage from './pages/police/PoliceDashboardPage'
 import PoliceGuestSearchPage from './pages/police/PoliceGuestSearchPage'
+import ReportsPage from './pages/reports/ReportsPage'
 import { ROUTES } from './utils/routes'
 
 export default function App() {
@@ -28,9 +31,11 @@ export default function App() {
       <Route
         path={ROUTES.login}
         element={
-          <GuestOnly>
-            <LoginPage />
-          </GuestOnly>
+          <PublicLayout>
+            <GuestOnly>
+              <LoginPage />
+            </GuestOnly>
+          </PublicLayout>
         }
       />
 
@@ -50,6 +55,7 @@ export default function App() {
         <Route path="dashboard" element={<HotelDashboardPage />} />
         <Route path="guests/register" element={<RegisterGuestPage />} />
         <Route path="guests" element={<GuestListPage />} />
+        <Route path="reports" element={<HotelGuestReportPage />} />
         <Route path="alerts" element={<HotelAlertsPage />} />
       </Route>
 
@@ -68,6 +74,7 @@ export default function App() {
         <Route path="guests" element={<PoliceGuestSearchPage />} />
         <Route path="alerts" element={<PoliceAlertsPage />} />
         <Route path="blacklist" element={<PoliceBlacklistPage />} />
+        <Route path="reports" element={<ReportsPage />} />
       </Route>
 
       <Route
@@ -84,6 +91,8 @@ export default function App() {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="hotels" element={<AdminHotelsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="alerts" element={<PoliceAlertsPage />} />
       </Route>
 
       <Route path="*" element={<RootRedirect />} />
